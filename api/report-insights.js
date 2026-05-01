@@ -36,8 +36,31 @@ Respond with a JSON object using exactly these keys:
 }`;
 
   try {
+    // Auto-discover available models for this API key
+    const listRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+    );
+    if (!listRes.ok) {
+      const err = await listRes.text();
+      throw new Error(`Cannot list models (${listRes.status}): ${err}`);
+    }
+    const listData = await listRes.json();
+    const available = (listData.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => m.name.replace('models/', ''));
+
+    const preferred = [
+      'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro',
+      'gemini-1.0-pro', 'gemini-pro',
+    ];
+    const model =
+      preferred.find(p => available.some(a => a === p || a.startsWith(p + '-'))) ||
+      available[0];
+
+    if (!model) throw new Error(`No usable Gemini models found. Available: ${available.join(', ')}`);
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,7 +84,7 @@ Respond with a JSON object using exactly these keys:
     if (!jsonMatch) throw new Error('Could not parse Gemini response as JSON');
 
     const insights = JSON.parse(jsonMatch[0]);
-    return res.status(200).json({ success: true, insights });
+    return res.status(200).json({ success: true, insights, model });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
