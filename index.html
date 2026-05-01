@@ -1445,9 +1445,12 @@ function render(){
   const days=new Date(+m.split('-')[0],+m.split('-')[1],0).getDate();
   const daily=total>0?Math.round(total/days):0;
   const budget=state.budget||30000;
-  const budgetPct=Math.min(100,Math.round(total/budget*100));
-  const budgetBarColor=budgetPct<70?'var(--green)':budgetPct<90?'var(--amber)':'var(--red)';
-  const budgetSubCls=budgetPct<70?'':budgetPct<90?'warn':'bad';
+  const isOver=total>budget;
+  const overAmt=total-budget;
+  const rawPct=budget>0?Math.round(total/budget*100):0;
+  const budgetBarPct=Math.min(100,rawPct);
+  const budgetBarColor=isOver?'var(--red)':rawPct<70?'var(--green)':rawPct<90?'var(--amber)':'var(--red)';
+  const budgetSubCls=isOver?'bad':rawPct<70?'':rawPct<90?'warn':'bad';
 
   /* Topbar month */
   document.getElementById('monthLabel').textContent=m;
@@ -1466,13 +1469,23 @@ function render(){
   const budgetEl=document.getElementById('metricBudget');
   if(budgetEl&&!budgetEl.querySelector('.budget-fc')){
     document.getElementById('metricBudgetVal').textContent='₹'+budget.toLocaleString('en-IN');
-    document.getElementById('metricBudgetSub').textContent=`${budgetPct}% used`;
+    document.getElementById('metricBudgetSub').textContent=isOver?'₹'+overAmt.toLocaleString('en-IN')+' over':rawPct+'% used';
     document.getElementById('metricBudgetSub').className=`metric-sub ${budgetSubCls}`;
   }
   document.getElementById('metricDailyVal').textContent='₹'+daily.toLocaleString('en-IN');
-  document.getElementById('metricLeftVal').textContent='₹'+Math.max(0,budget-total).toLocaleString('en-IN');
+  const leftEl=document.getElementById('metricLeftVal');
+  const leftSubEl=document.getElementById('metricLeftSub');
+  if(isOver){
+    leftEl.textContent='−₹'+overAmt.toLocaleString('en-IN');
+    leftEl.style.color='var(--red)';
+    if(leftSubEl){leftSubEl.textContent='over budget';}
+  }else{
+    leftEl.textContent='₹'+(budget-total).toLocaleString('en-IN');
+    leftEl.style.color='var(--ink-1)';
+    if(leftSubEl){leftSubEl.textContent='of budget';}
+  }
   const bf=document.getElementById('budgetBarFill');
-  bf.style.width=budgetPct+'%';
+  bf.style.width=budgetBarPct+'%';
   bf.style.background=budgetBarColor;
 
   /* Tab counts */
