@@ -265,6 +265,61 @@ input,select,button{font-family:var(--ff);}
 }
 .btn-del:hover{background:var(--red-lt);color:var(--red);}
 
+/* ── EXPENSE ENTRIES (expandable) ───────────────────── */
+.exp-item{border-bottom:1px solid var(--border-lt);}
+.exp-item:last-child{border-bottom:none;}
+.exp-main-row{cursor:pointer;border-bottom:none !important;user-select:none;}
+.exp-chevron{
+  width:22px;height:22px;border-radius:6px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:var(--ink-3);
+  background:var(--s3);
+  transition:transform .2s,background .15s,color .15s;
+}
+.exp-chevron.open{transform:rotate(90deg);background:var(--brand-lt);color:var(--brand);}
+.exp-entries{display:none;border-top:1px solid var(--border-lt);}
+.exp-entries.open{display:block;}
+.entry-row{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 18px 7px 72px;
+  border-bottom:1px solid var(--border-lt);
+  background:var(--s2);
+}
+.entry-row:last-of-type{border-bottom:none;}
+.entry-date{font-size:11px;font-weight:700;color:var(--ink-3);min-width:48px;flex-shrink:0;}
+.entry-note{font-size:12px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.entry-amt{font-size:12px;font-weight:800;color:var(--ink-1);flex-shrink:0;}
+.btn-del-sm{
+  width:22px;height:22px;border-radius:6px;border:none;background:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--ink-4);
+  transition:background .15s,color .15s;flex-shrink:0;
+}
+.btn-del-sm:hover{background:var(--red-lt);color:var(--red);}
+.entry-add-form{
+  display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;align-items:center;
+  background:var(--surface);border-top:1px solid var(--border-lt);
+}
+.entry-fc{
+  height:36px;padding:0 10px;
+  border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-size:13px;font-weight:500;color:var(--ink-1);
+  background:var(--s2);outline:none;
+  transition:border-color .15s,background .15s;
+}
+.entry-fc:focus{border-color:var(--brand);background:var(--surface);}
+.entry-fc-date{width:138px;}
+.entry-fc-amt{width:82px;}
+.entry-fc-note{flex:1;min-width:80px;}
+.btn-entry-add{
+  height:36px;padding:0 14px;
+  background:var(--brand);color:#fff;
+  border:none;border-radius:var(--r-sm);
+  font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+  transition:background .15s;
+}
+.btn-entry-add:hover{background:var(--brand-dk);}
+
 /* ── FORM ───────────────────────────────────────────── */
 .form-section{padding:16px 18px;}
 .f-row{display:flex;gap:10px;flex-wrap:wrap;}
@@ -860,6 +915,7 @@ let state = {expenses:{},wishlist:[],people:[],splits:{}};
 let currentMonth = (()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;})();
 
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function getMonth(){return currentMonth;}
 
 function shiftMonth(d){
@@ -889,17 +945,88 @@ function loadState(){
   state.wishlist.forEach(w=>{if(!w.id)w.id=genId();});
   state.people.forEach(p=>{if(!p.id)p.id=genId();});
   if(!state.expenses[currentMonth]){
+    const td=todayStr();
     state.expenses[currentMonth]=[
-      {id:genId(),name:'Rent',           amount:15000,cat:'Housing'},
-      {id:genId(),name:'Groceries',      amount:4500, cat:'Food'},
-      {id:genId(),name:'Auto rickshaw',  amount:1200, cat:'Transport'},
-      {id:genId(),name:'Electricity',    amount:800,  cat:'Utilities'},
-      {id:genId(),name:'Dinner out',     amount:2000, cat:'Food'},
-      {id:genId(),name:'Mobile recharge',amount:599,  cat:'Utilities'}
+      {id:genId(),name:'Rent',           cat:'Housing',    entries:[{id:genId(),date:td,amount:15000,note:'Monthly rent'}]},
+      {id:genId(),name:'Groceries',      cat:'Food',       entries:[{id:genId(),date:td,amount:2500,note:'Week 1'},{id:genId(),date:td,amount:2000,note:'Week 2'}]},
+      {id:genId(),name:'Auto rickshaw',  cat:'Transport',  entries:[{id:genId(),date:td,amount:600,note:''},{id:genId(),date:td,amount:600,note:''}]},
+      {id:genId(),name:'Electricity',    cat:'Utilities',  entries:[{id:genId(),date:td,amount:800,note:''}]},
+      {id:genId(),name:'Dinner out',     cat:'Food',       entries:[{id:genId(),date:td,amount:2000,note:'Restaurant'}]},
+      {id:genId(),name:'Mobile recharge',cat:'Utilities',  entries:[{id:genId(),date:td,amount:599,note:''}]}
     ];
   }
+  // Migrate old format (flat amount) to entries array
+  Object.values(state.expenses).forEach(arr=>arr.forEach(exp=>{
+    if(typeof exp.amount!=='undefined'&&!exp.entries){
+      exp.entries=exp.amount>0?[{id:genId(),date:todayStr(),amount:exp.amount,note:''}]:[];
+      delete exp.amount;
+    } else if(!exp.entries) exp.entries=[];
+  }));
 }
 function saveState(){try{localStorage.setItem('expTrackerV5',JSON.stringify(state));}catch(e){}}
+
+/* ── EXPENSE ITEM HELPERS ───────────────────────────── */
+let expandedExp=new Set();
+function expTotal(exp){return(exp.entries||[]).reduce((s,e)=>s+(e.amount||0),0);}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(d){try{const dt=new Date(d+'T00:00:00');return dt.toLocaleString('default',{month:'short',day:'numeric'});}catch{return d;}}
+
+function toggleExpand(expId){
+  if(expandedExp.has(expId))expandedExp.delete(expId);else expandedExp.add(expId);
+  const m=getMonth();renderExpCard(state.expenses[m]||[]);
+}
+
+function renderExpCard(expenses){
+  const expCard=document.getElementById('expCard');
+  if(expenses.length===0){
+    expCard.innerHTML=`<div class="card-head"><span class="card-title"><span class="ct-dot" style="background:var(--brand)"></span>Expenses</span><span class="card-badge">0</span></div>
+      <div class="empty"><div class="empty-ic">🧾</div><div class="empty-title">No expenses yet</div><div class="empty-desc">Add your first expense using the form below.</div></div>`;
+    return;
+  }
+  expCard.innerHTML=`<div class="card-head"><span class="card-title"><span class="ct-dot" style="background:var(--brand)"></span>Expenses</span><span class="card-badge">${expenses.length}</span></div>
+    ${expenses.map(exp=>{
+      const total=expTotal(exp);
+      const isOpen=expandedExp.has(exp.id);
+      const col=CATS[exp.cat]||'#6B7280';
+      const entries=exp.entries||[];
+      const entryRows=entries.length>0
+        ?entries.map(en=>`<div class="entry-row">
+            <span class="entry-date">${fmtDate(en.date)}</span>
+            <span class="entry-note">${en.note?escHtml(en.note):'<span style="color:var(--ink-4)">—</span>'}</span>
+            <span class="entry-amt">₹${en.amount.toLocaleString('en-IN')}</span>
+            <button class="btn-del-sm" onclick="deleteEntry('${exp.id}','${en.id}');event.stopPropagation()" title="Remove">✕</button>
+          </div>`).join('')
+        :`<div style="padding:10px 18px 10px 72px;font-size:12px;color:var(--ink-3);background:var(--s2);">No entries yet — add one below.</div>`;
+      return `<div class="exp-item" id="exp-item-${exp.id}">
+        <div class="exp-row exp-main-row" onclick="toggleExpand('${exp.id}')">
+          <span class="exp-ic" style="background:${col}1F">${CAT_IC[exp.cat]||'📦'}</span>
+          <div class="exp-info">
+            <div class="exp-name">${escHtml(exp.name)}</div>
+            <div class="exp-cat">${exp.cat}${entries.length?` · ${entries.length} entr${entries.length===1?'y':'ies'}`:''}${exp.fromWish?'<span class="exp-tag" style="margin-left:5px">wish</span>':''}</div>
+          </div>
+          <div class="exp-right">
+            <span class="exp-amt">₹${total.toLocaleString('en-IN')}</span>
+            <span class="exp-chevron ${isOpen?'open':''}">›</span>
+            <button class="btn-del" onclick="deleteExpense('${exp.id}');event.stopPropagation()" title="Remove">✕</button>
+          </div>
+        </div>
+        <div class="exp-entries ${isOpen?'open':''}" id="entries-${exp.id}">
+          ${entryRows}
+          <div class="entry-add-form">
+            <input class="entry-fc entry-fc-date" type="date" id="ed-${exp.id}" value="${todayStr()}">
+            <div style="position:relative;flex:0 0 82px;">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:var(--ink-3);pointer-events:none;">₹</span>
+              <input class="entry-fc entry-fc-amt" type="number" id="ea-${exp.id}" placeholder="0" min="0" style="padding-left:22px;width:100%"
+                onkeydown="if(event.key==='Enter')addEntry('${exp.id}')">
+            </div>
+            <input class="entry-fc entry-fc-note" type="text" id="en-${exp.id}" placeholder="Note (optional)"
+              onkeydown="if(event.key==='Enter')addEntry('${exp.id}')">
+            <button class="btn-entry-add" onclick="addEntry('${exp.id}')">＋ Add</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
 
 /* ── EXPENSES ───────────────────────────────────────── */
 function addExpense(){
@@ -909,9 +1036,11 @@ function addExpense(){
   if(!name||isNaN(amt)||amt<=0)return;
   const m=getMonth();
   if(!state.expenses[m])state.expenses[m]=[];
-  state.expenses[m].push({id:genId(),name,amount:amt,cat});
+  const id=genId();
+  state.expenses[m].push({id,name,cat,entries:[{id:genId(),date:todayStr(),amount:amt,note:''}]});
   document.getElementById('newName').value='';
   document.getElementById('newAmt').value='';
+  expandedExp.add(id);
   saveState();render();
 }
 function deleteExpense(id){
@@ -923,6 +1052,29 @@ function deleteExpense(id){
   }
   state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.id!==id);
   if(state.splits[m])delete state.splits[m][id];
+  expandedExp.delete(id);
+  saveState();render();
+}
+function addEntry(expId){
+  const m=getMonth();
+  const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
+  if(!exp)return;
+  const date=document.getElementById('ed-'+expId)?.value||todayStr();
+  const amt=parseFloat(document.getElementById('ea-'+expId)?.value);
+  const note=(document.getElementById('en-'+expId)?.value||'').trim();
+  if(isNaN(amt)||amt<=0)return;
+  exp.entries.push({id:genId(),date,amount:amt,note});
+  const eaEl=document.getElementById('ea-'+expId);
+  const enEl=document.getElementById('en-'+expId);
+  if(eaEl)eaEl.value='';
+  if(enEl)enEl.value='';
+  saveState();render();
+}
+function deleteEntry(expId,entryId){
+  const m=getMonth();
+  const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
+  if(!exp)return;
+  exp.entries=exp.entries.filter(en=>en.id!==entryId);
   saveState();render();
 }
 
@@ -946,7 +1098,7 @@ function toggleWish(id){
   if(w.done&&w.cost>0){
     if(!state.expenses[m])state.expenses[m]=[];
     const already=state.expenses[m].find(e=>e.fromWish===id);
-    if(!already)state.expenses[m].push({id:genId(),name:w.name,amount:w.cost,cat:w.cat||'Shopping',fromWish:id});
+    if(!already){const wid=genId();state.expenses[m].push({id:wid,name:w.name,cat:w.cat||'Shopping',fromWish:id,entries:[{id:genId(),date:todayStr(),amount:w.cost,note:'From wish list'}]});expandedExp.add(wid);}
   }else if(!w.done){
     state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.fromWish!==id);
   }
@@ -987,7 +1139,7 @@ function updateSplit(expId,personId,rawValue){
   if(e){
     const expSp=state.splits[m][expId]||{};
     const assigned=state.people.reduce((s,p)=>s+(expSp[p.id]||0),0);
-    const rem=e.amount-assigned;
+    const rem=expTotal(e)-assigned;
     const el=document.getElementById('rem-'+expId);
     if(el){el.textContent=Math.abs(rem)<0.5?'✓ Done':'₹'+rem.toLocaleString('en-IN')+' left';el.className='split-rem '+(Math.abs(rem)<0.5?'ok':'bad');}
   }
@@ -1000,8 +1152,8 @@ function quickSplit(expId){
   if(!e)return;
   if(!state.splits[m])state.splits[m]={};
   if(!state.splits[m][expId])state.splits[m][expId]={};
-  const base=Math.floor(e.amount/state.people.length);
-  const rem=e.amount-base*state.people.length;
+  const base=Math.floor(expTotal(e)/state.people.length);
+  const rem=expTotal(e)-base*state.people.length;
   state.people.forEach((p,i)=>{state.splits[m][expId][p.id]=base+(i===0?rem:0);});
   saveState();renderSplit();
 }
@@ -1011,8 +1163,8 @@ function splitAllEqual(){
   (state.expenses[m]||[]).forEach(e=>{
     if(!state.splits[m])state.splits[m]={};
     if(!state.splits[m][e.id])state.splits[m][e.id]={};
-    const base=Math.floor(e.amount/state.people.length);
-    const rem=e.amount-base*state.people.length;
+    const base=Math.floor(expTotal(e)/state.people.length);
+    const rem=expTotal(e)-base*state.people.length;
     state.people.forEach((p,i)=>{state.splits[m][e.id][p.id]=base+(i===0?rem:0);});
   });
   saveState();renderSplit();
@@ -1022,7 +1174,7 @@ function updatePsnSummary(){
   const m=getMonth();
   const expenses=state.expenses[m]||[];
   const splits=state.splits[m]||{};
-  const total=expenses.reduce((s,e)=>s+e.amount,0);
+  const total=expenses.reduce((s,e)=>s+expTotal(e),0);
   const el=document.getElementById('personSummary');
   if(!el)return;
   if(state.people.length===0){
@@ -1089,7 +1241,7 @@ function renderSplit(){
     const tbody=`<tbody>${expenses.map(e=>{
       const expSp=splits[e.id]||{};
       const assigned=people.reduce((s,p)=>s+(expSp[p.id]||0),0);
-      const rem=e.amount-assigned;
+      const rem=expTotal(e)-assigned;
       const remOk=Math.abs(rem)<0.5;
       return `<tr>
         <td><div class="sp-name">
@@ -1097,7 +1249,7 @@ function renderSplit(){
           ${e.name}
           <button class="sp-eq-btn" onclick="quickSplit('${e.id}')" title="Split equally">=</button>
         </div></td>
-        <td><span class="sp-total">₹${e.amount.toLocaleString('en-IN')}</span></td>
+        <td><span class="sp-total">₹${expTotal(e).toLocaleString('en-IN')}</span></td>
         ${people.map(p=>`<td><input class="split-input" type="number" min="0" step="1"
           value="${expSp[p.id]!=null?expSp[p.id]:''}" placeholder="0"
           onchange="updateSplit('${e.id}','${p.id}',this.value)"/></td>`).join('')}
@@ -1120,7 +1272,7 @@ function renderCharts(){
 
   /* Category doughnut */
   const catTotals={};
-  expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;});
+  expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+expTotal(e);});
   const cats=Object.keys(catTotals);
   const colors=cats.map(c=>CATS[c]||'#6B7280');
   if(pieChart)pieChart.destroy();
@@ -1138,7 +1290,7 @@ function renderCharts(){
   /* Monthly bar */
   const allM=Object.keys(state.expenses).sort().slice(-6);
   const mLbls=allM.map(k=>{const[y,mo]=k.split('-');return new Date(+y,+mo-1).toLocaleString('default',{month:'short'});});
-  const mTots=allM.map(k=>Math.round((state.expenses[k]||[]).reduce((s,e)=>s+e.amount,0)));
+  const mTots=allM.map(k=>Math.round((state.expenses[k]||[]).reduce((s,e)=>s+expTotal(e),0)));
   if(barChart)barChart.destroy();
   barChart=new Chart(document.getElementById('barChart'),{
     type:'bar',
@@ -1211,12 +1363,12 @@ function renderCharts(){
 function render(){
   const m=getMonth();
   const expenses=state.expenses[m]||[];
-  const total=expenses.reduce((s,e)=>s+e.amount,0);
+  const total=expenses.reduce((s,e)=>s+expTotal(e),0);
   const catTotals={};
-  expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;});
+  expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+expTotal(e);});
   const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
   const pm=getPrevMonth(m);
-  const prevTotal=(state.expenses[pm]||[]).reduce((s,e)=>s+e.amount,0);
+  const prevTotal=(state.expenses[pm]||[]).reduce((s,e)=>s+expTotal(e),0);
   const diff=total-prevTotal;
   const diffPct=prevTotal>0?Math.round(Math.abs(diff)/prevTotal*100):0;
 
@@ -1254,26 +1406,7 @@ function render(){
     </div>`;
 
   /* Expense card */
-  const ic=hex=>hex+'1F';
-  const expCard=document.getElementById('expCard');
-  if(expenses.length===0){
-    expCard.innerHTML=`<div class="card-head"><span class="card-title"><span class="ct-dot" style="background:var(--brand)"></span>Expenses</span><span class="card-badge">0</span></div>
-      <div class="empty"><div class="empty-ic">🧾</div><div class="empty-title">No expenses yet</div><div class="empty-desc">Add your first expense using the form below.</div></div>`;
-  }else{
-    expCard.innerHTML=`<div class="card-head"><span class="card-title"><span class="ct-dot" style="background:var(--brand)"></span>Expenses</span><span class="card-badge">${expenses.length}</span></div>
-      ${expenses.map(e=>`<div class="exp-row">
-        <span class="exp-ic" style="background:${ic(CATS[e.cat]||'#6B7280')}">${CAT_IC[e.cat]||'📦'}</span>
-        <div class="exp-info">
-          <div class="exp-name">${e.name}</div>
-          <div class="exp-cat">${e.cat}</div>
-        </div>
-        <div class="exp-right">
-          ${e.fromWish?'<span class="exp-tag">wish</span>':''}
-          <span class="exp-amt">₹${e.amount.toLocaleString('en-IN')}</span>
-          <button class="btn-del" onclick="deleteExpense('${e.id}')" title="Remove">✕</button>
-        </div>
-      </div>`).join('')}`;
-  }
+  renderExpCard(expenses);
 
   /* Wishlist card */
   const wishCard=document.getElementById('wishCard');
@@ -1337,7 +1470,7 @@ async function saveToSheet(){
     const res=await fetch('/api/save-expense',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({month:monthLabel(m),expenses})
+      body:JSON.stringify({month:monthLabel(m),expenses:expenses.map(e=>({name:e.name,cat:e.cat,amount:expTotal(e)}))})
     });
     const data=await res.json();
     if(data.success){
@@ -1373,14 +1506,14 @@ function renderReportContent(){
   const m=getMonth(),pm=getPrevMonth(m);
   const expenses=state.expenses[m]||[];
   const prevExp=state.expenses[pm]||[];
-  const total=expenses.reduce((s,e)=>s+e.amount,0);
-  const prevTotal=prevExp.reduce((s,e)=>s+e.amount,0);
+  const total=expenses.reduce((s,e)=>s+expTotal(e),0);
+  const prevTotal=prevExp.reduce((s,e)=>s+expTotal(e),0);
   const diff=total-prevTotal;
   const diffPct=prevTotal>0?Math.round(Math.abs(diff)/prevTotal*100):0;
   const days=new Date(+m.split('-')[0],+m.split('-')[1],0).getDate();
   const daily=total>0?Math.round(total/days):0;
-  const catTotals={};expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;});
-  const prevCatTotals={};prevExp.forEach(e=>{prevCatTotals[e.cat]=(prevCatTotals[e.cat]||0)+e.amount;});
+  const catTotals={};expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+expTotal(e);});
+  const prevCatTotals={};prevExp.forEach(e=>{prevCatTotals[e.cat]=(prevCatTotals[e.cat]||0)+expTotal(e);});
   const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
 
   document.getElementById('rptMonth').textContent=monthLabel(m);
@@ -1440,7 +1573,7 @@ function renderReportCharts(){
   rptTrendChart=new Chart(document.getElementById('rptTrendChart'),{
     type:'bar',
     data:{labels:mLabels,datasets:[{
-      data:allM.map(k=>Math.round((state.expenses[k]||[]).reduce((s,e)=>s+e.amount,0))),
+      data:allM.map(k=>Math.round((state.expenses[k]||[]).reduce((s,e)=>s+expTotal(e),0))),
       backgroundColor:allM.map(k=>k===m?'#5B5FED':'#C7D2FE'),borderRadius:8,borderSkipped:false
     }]},
     options:{responsive:true,maintainAspectRatio:false,
