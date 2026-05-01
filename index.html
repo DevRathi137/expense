@@ -77,7 +77,13 @@ input,select,button{font-family:var(--ff);}
   flex-shrink:0;
 }
 .topbar-sep{color:var(--ink-4);}
-.brand-month{font-family:var(--ff-mono);color:var(--ink-2);font-weight:500;}
+.brand-month{
+  font-family:var(--ff-mono);color:var(--ink-2);font-weight:500;
+  cursor:pointer;border-bottom:1px dashed var(--ink-4);padding-bottom:1px;
+  background:none;border-top:none;border-left:none;border-right:none;
+  transition:color .12s,border-color .12s;
+}
+.brand-month:hover{color:var(--ink-1);border-bottom-color:var(--ink-2);}
 .topbar-actions{display:flex;align-items:center;gap:4px;}
 .ic-btn{
   width:26px;height:26px;border-radius:var(--r-sm);
@@ -130,6 +136,52 @@ input,select,button{font-family:var(--ff);}
 /* budget bar */
 .budget-bar{height:3px;background:var(--border);border-radius:99px;margin-top:14px;overflow:hidden;}
 .budget-bar-fill{height:100%;background:var(--amber);border-radius:99px;transition:width .4s;}
+
+/* budget inline edit */
+.metric.editable{cursor:pointer;transition:background .12s;}
+.metric.editable:hover{background:var(--surface-2);}
+.budget-fc{
+  width:100%;height:22px;padding:0 6px;margin-top:4px;
+  background:var(--surface-3);border:1px solid var(--brand);
+  border-radius:var(--r-sm);color:var(--ink-1);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  outline:none;font-variant-numeric:tabular-nums;
+}
+
+/* month picker */
+.month-picker-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  z-index:150;
+  display:flex;align-items:flex-start;justify-content:flex-start;
+  padding:46px 0 0 16px;
+  opacity:0;pointer-events:none;transition:opacity .18s;
+}
+.month-picker-overlay.open{opacity:1;pointer-events:all;}
+.month-picker{
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-md);
+  box-shadow:var(--sh-md);
+  padding:12px;width:212px;
+}
+.mp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.mp-year{font-family:var(--ff-mono);font-size:13px;font-weight:600;color:var(--ink-1);}
+.mp-arrow{
+  width:24px;height:24px;border-radius:var(--r-sm);
+  background:transparent;border:1px solid var(--border);
+  color:var(--ink-2);font-size:14px;cursor:pointer;
+  display:grid;place-items:center;transition:background .12s,color .12s;
+}
+.mp-arrow:hover{background:var(--surface-2);color:var(--ink-1);}
+.mp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;}
+.mp-btn{
+  font-family:var(--ff-mono);font-size:10px;font-weight:500;
+  padding:8px 2px;border-radius:var(--r-sm);
+  border:none;background:transparent;color:var(--ink-2);
+  cursor:pointer;text-align:center;transition:background .12s,color .12s;
+}
+.mp-btn:hover{background:var(--surface-2);color:var(--ink-1);}
+.mp-btn.active{background:var(--brand-lt);color:var(--brand);font-weight:600;}
 
 /* ── TAB NAV ─────────────────────────────────────────── */
 .tab-nav{
@@ -648,7 +700,7 @@ kbd{
       <span class="brand-mark">S</span>
       spendwise
       <span class="topbar-sep">/</span>
-      <span class="brand-month" id="monthLabel">2026-04</span>
+      <button class="brand-month" id="monthLabel" onclick="openMonthPicker()" title="Pick month">2026-04</button>
     </div>
     <div class="topbar-actions">
       <button class="ic-btn" onclick="shiftMonth(-1)" title="Previous month">&#8249;</button>
@@ -667,7 +719,7 @@ kbd{
       <div class="summary-delta" id="summaryDelta"></div>
     </div>
     <div class="metric-strip">
-      <div class="metric">
+      <div class="metric editable" id="metricBudget" onclick="editBudget()" title="Click to edit budget">
         <div class="metric-lbl">budget</div>
         <div class="metric-val" id="metricBudgetVal">&#8377;30,000</div>
         <div class="metric-sub" id="metricBudgetSub">—</div>
@@ -900,10 +952,21 @@ kbd{
 
 <span id="wishPill" style="display:none"></span>
 
+<!-- MONTH PICKER -->
+<div class="month-picker-overlay" id="monthPickerOverlay" onclick="closeMonthPicker(event)">
+  <div class="month-picker">
+    <div class="mp-header">
+      <button class="mp-arrow" onclick="shiftPickerYear(-1)">&#8249;</button>
+      <span class="mp-year" id="mpYear">2026</span>
+      <button class="mp-arrow" onclick="shiftPickerYear(+1)">&#8250;</button>
+    </div>
+    <div class="mp-grid" id="mpGrid"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 /* ── CONSTANTS ──────────────────────────────────────── */
-const BUDGET = 30000;
 const CATS = {
   Housing:'#7B8BFF',Food:'#46D29A',Transport:'#F2C166',Health:'#F08CB4',
   Shopping:'#B58CFF',Entertainment:'#F26B6B',Utilities:'#5BD0CB',Other:'#62677A'
@@ -953,6 +1016,7 @@ function loadState(){
   if(!state.wishlist) state.wishlist=[];
   if(!state.people)   state.people=[];
   if(!state.splits)   state.splits={};
+  if(state.budget===undefined)state.budget=30000;
   Object.values(state.expenses).forEach(a=>a.forEach(e=>{if(!e.id)e.id=genId();}));
   state.wishlist.forEach(w=>{if(!w.id)w.id=genId();});
   state.people.forEach(p=>{if(!p.id)p.id=genId();});
@@ -1374,7 +1438,8 @@ function render(){
   const diffPct=prevTotal>0?Math.round(Math.abs(diff)/prevTotal*100):0;
   const days=new Date(+m.split('-')[0],+m.split('-')[1],0).getDate();
   const daily=total>0?Math.round(total/days):0;
-  const budgetPct=Math.min(100,Math.round(total/BUDGET*100));
+  const budget=state.budget||30000;
+  const budgetPct=Math.min(100,Math.round(total/budget*100));
   const budgetBarColor=budgetPct<70?'var(--green)':budgetPct<90?'var(--amber)':'var(--red)';
   const budgetSubCls=budgetPct<70?'':budgetPct<90?'warn':'bad';
 
@@ -1392,10 +1457,14 @@ function render(){
   }
 
   /* Metric strip */
-  document.getElementById('metricBudgetSub').textContent=`${budgetPct}% used`;
-  document.getElementById('metricBudgetSub').className=`metric-sub ${budgetSubCls}`;
+  const budgetEl=document.getElementById('metricBudget');
+  if(budgetEl&&!budgetEl.querySelector('.budget-fc')){
+    document.getElementById('metricBudgetVal').textContent='₹'+budget.toLocaleString('en-IN');
+    document.getElementById('metricBudgetSub').textContent=`${budgetPct}% used`;
+    document.getElementById('metricBudgetSub').className=`metric-sub ${budgetSubCls}`;
+  }
   document.getElementById('metricDailyVal').textContent='₹'+daily.toLocaleString('en-IN');
-  document.getElementById('metricLeftVal').textContent='₹'+Math.max(0,BUDGET-total).toLocaleString('en-IN');
+  document.getElementById('metricLeftVal').textContent='₹'+Math.max(0,budget-total).toLocaleString('en-IN');
   const bf=document.getElementById('budgetBarFill');
   bf.style.width=budgetPct+'%';
   bf.style.background=budgetBarColor;
@@ -1652,6 +1721,59 @@ async function fetchAIInsights(m,pm,expenses,prevExp,catTotals,prevCatTotals,tot
   }catch(err){
     el.innerHTML=`<div class="ai-error">Could not load AI insights: ${err.message}. Make sure GEMINI_API_KEY is set in environment variables.</div>`;
   }
+}
+
+/* ── MONTH PICKER ───────────────────────────────────── */
+let pickerYear=new Date().getFullYear();
+
+function openMonthPicker(){
+  pickerYear=+currentMonth.split('-')[0];
+  renderMonthPicker();
+  document.getElementById('monthPickerOverlay').classList.add('open');
+}
+function closeMonthPicker(e){
+  if(e&&e.target!==document.getElementById('monthPickerOverlay'))return;
+  document.getElementById('monthPickerOverlay').classList.remove('open');
+}
+function shiftPickerYear(d){
+  pickerYear+=d;
+  renderMonthPicker();
+}
+function pickMonth(mo){
+  currentMonth=`${pickerYear}-${String(mo).padStart(2,'0')}`;
+  if(!state.expenses[currentMonth])state.expenses[currentMonth]=[];
+  document.getElementById('monthPickerOverlay').classList.remove('open');
+  saveState();render();
+  if(document.getElementById('pane-charts').classList.contains('active'))setTimeout(renderCharts,50);
+  if(document.getElementById('pane-split').classList.contains('active'))renderSplit();
+}
+function renderMonthPicker(){
+  document.getElementById('mpYear').textContent=pickerYear;
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const[cy,cm]=currentMonth.split('-').map(Number);
+  document.getElementById('mpGrid').innerHTML=MONTHS.map((name,i)=>{
+    const mo=i+1;
+    const isActive=pickerYear===cy&&mo===cm;
+    return `<button class="mp-btn${isActive?' active':''}" onclick="pickMonth(${mo})">${name}</button>`;
+  }).join('');
+}
+
+/* ── BUDGET EDIT ─────────────────────────────────────── */
+function editBudget(){
+  const m=document.getElementById('metricBudget');
+  if(!m||m.querySelector('.budget-fc'))return;
+  m.innerHTML=`<div class="metric-lbl">budget</div>
+    <div class="metric-val">&#8377;${(state.budget||30000).toLocaleString('en-IN')}</div>
+    <input class="budget-fc" type="number" value="${state.budget||30000}" min="0" step="1000"
+      onblur="saveBudget(this.value)"
+      onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')render();" />`;
+  const inp=m.querySelector('.budget-fc');
+  if(inp){inp.focus();inp.select();}
+}
+function saveBudget(val){
+  const v=parseInt(val,10);
+  if(!isNaN(v)&&v>0)state.budget=v;
+  saveState();render();
 }
 
 /* ── INIT ───────────────────────────────────────────── */
