@@ -489,8 +489,19 @@ input,select,button{font-family:var(--ff);}
   border-top:1px solid var(--border-lt);
   z-index:100;
 }
+.save-bar-row{display:flex;gap:10px;}
+.btn-report{
+  flex:1;height:48px;
+  background:var(--brand-lt);color:var(--brand);
+  border:1.5px solid rgba(91,95,237,.22);border-radius:var(--r-lg);
+  font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .15s,transform .12s,box-shadow .15s;
+}
+.btn-report:hover{background:#DDE0FC;transform:translateY(-1px);box-shadow:0 4px 12px rgba(91,95,237,.18);}
+.btn-report:active{transform:none;}
 .btn-save-sheet{
-  width:100%;height:48px;
+  flex:1;height:48px;
   background:linear-gradient(135deg,#10B981,#059669);
   color:#fff;border:none;border-radius:var(--r-lg);
   font-size:14px;font-weight:700;cursor:pointer;
@@ -501,6 +512,87 @@ input,select,button{font-family:var(--ff);}
 .btn-save-sheet:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,.4);}
 .btn-save-sheet:active{transform:none;}
 .btn-save-sheet:disabled{opacity:.65;cursor:not-allowed;transform:none !important;}
+
+/* ── REPORT MODAL ────────────────────────────────────── */
+.report-overlay{
+  position:fixed;inset:0;
+  background:rgba(13,15,28,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  z-index:200;display:flex;align-items:flex-end;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.report-overlay.open{opacity:1;pointer-events:all;}
+.report-panel{
+  width:100%;max-height:92vh;
+  background:var(--bg);border-radius:24px 24px 0 0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);
+}
+.report-overlay.open .report-panel{transform:translateY(0);}
+.rpt-hdr{
+  background:linear-gradient(148deg,#1A1758 0%,#312E81 28%,#4F46E5 62%,#7C3AED 100%);
+  padding:20px 20px 22px;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  position:sticky;top:0;z-index:10;
+}
+.rpt-hdr-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+.rpt-hdr-month{font-size:26px;font-weight:900;color:#fff;letter-spacing:-.04em;}
+.rpt-close{
+  width:34px;height:34px;border-radius:10px;border:none;
+  background:rgba(255,255,255,.14);color:#fff;font-size:16px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background .15s;
+}
+.rpt-close:hover{background:rgba(255,255,255,.26);}
+.rpt-body{padding:16px 16px 36px;display:flex;flex-direction:column;gap:14px;}
+.rpt-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.rpt-stat{
+  background:var(--surface);border:1px solid var(--border-lt);
+  border-radius:var(--r-lg);padding:14px 13px 12px;
+  position:relative;overflow:hidden;
+}
+.rpt-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.rps-b::before{background:linear-gradient(90deg,#5B5FED,#818CF8);}
+.rps-g::before{background:linear-gradient(90deg,#10B981,#34D399);}
+.rps-a::before{background:linear-gradient(90deg,#F59E0B,#FCD34D);}
+.rps-v::before{background:linear-gradient(90deg,#8B5CF6,#A78BFA);}
+.rps-r::before{background:linear-gradient(90deg,#EC4899,#F9A8D4);}
+.rpt-stat-ic{font-size:17px;margin-bottom:6px;}
+.rpt-stat-lbl{font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;}
+.rpt-stat-val{font-size:19px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em;line-height:1.1;word-break:break-all;}
+.rpt-stat-sub{font-size:10px;font-weight:500;color:var(--ink-3);margin-top:2px;}
+.rpt-card{background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-xl);overflow:hidden;}
+.rpt-card-head{padding:13px 16px;border-bottom:1px solid var(--border-lt);}
+.rpt-card-title{font-size:13px;font-weight:700;color:var(--ink-1);display:flex;align-items:center;gap:7px;}
+.rpt-ct-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.rpt-card-body{padding:12px 16px 14px;}
+.cmp-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-lt);}
+.cmp-row:last-child{border-bottom:none;}
+.cmp-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.cmp-info{flex:1;min-width:0;}
+.cmp-name{font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px;}
+.cmp-bar-track{height:4px;background:var(--border-lt);border-radius:99px;overflow:hidden;}
+.cmp-bar-fill{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.cmp-right{text-align:right;flex-shrink:0;min-width:72px;}
+.cmp-amt{font-size:13px;font-weight:800;color:var(--ink-1);}
+.cmp-delta{font-size:10px;font-weight:700;margin-top:2px;}
+.cmp-up{color:var(--red);}
+.cmp-down{color:var(--green);}
+.cmp-flat{color:var(--ink-3);}
+.rpt-chart{height:220px;position:relative;width:100%;}
+.ai-loading{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 20px;text-align:center;}
+.ai-spinner{width:34px;height:34px;border:3px solid var(--border-lt);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.ai-loading-text{font-size:13px;color:var(--ink-3);font-weight:500;}
+.ai-section{margin-bottom:16px;}
+.ai-section:last-child{margin-bottom:0;}
+.ai-section-title{font-size:10px;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.ai-summary{font-size:13px;line-height:1.75;color:var(--ink-2);}
+.ai-list{list-style:none;display:flex;flex-direction:column;gap:7px;padding:0;}
+.ai-list li{font-size:12px;line-height:1.65;color:var(--ink-2);padding-left:16px;position:relative;}
+.ai-list li::before{content:'•';position:absolute;left:0;color:var(--brand);font-weight:900;}
+.ai-positive{background:var(--green-lt);border-radius:var(--r-md);padding:12px 14px;font-size:13px;line-height:1.65;color:#065F46;font-weight:500;}
+.ai-error{background:var(--red-lt);border-radius:var(--r-md);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--red);}
+
 @supports(padding-bottom:env(safe-area-inset-bottom)){
   .content{padding-bottom:max(84px,calc(52px + env(safe-area-inset-bottom)));}
   .save-sheet-bar{padding-bottom:max(10px,calc(6px + env(safe-area-inset-bottom)));}
@@ -705,13 +797,46 @@ input,select,button{font-family:var(--ff);}
 
   </div>
 
-  <!-- SAVE TO SPREADSHEET -->
+  <!-- BOTTOM BAR -->
   <div class="save-sheet-bar">
-    <button class="btn-save-sheet" id="saveSheetBtn" onclick="saveToSheet()">
-      📊 Save Monthly Expense to Spreadsheet
-    </button>
+    <div class="save-bar-row">
+      <button class="btn-report" onclick="openReport()">📋 Monthly Report</button>
+      <button class="btn-save-sheet" id="saveSheetBtn" onclick="saveToSheet()">💾 Save to Sheet</button>
+    </div>
   </div>
 
+</div>
+
+<!-- MONTHLY REPORT MODAL -->
+<div class="report-overlay" id="reportOverlay" onclick="closeReport(event)">
+  <div class="report-panel">
+    <div class="rpt-hdr">
+      <div>
+        <div class="rpt-hdr-lbl">Monthly Report</div>
+        <div class="rpt-hdr-month" id="rptMonth">Apr 2026</div>
+      </div>
+      <button class="rpt-close" onclick="closeReport()">✕</button>
+    </div>
+    <div class="rpt-body">
+      <div class="rpt-stats" id="rptStats"></div>
+      <div class="rpt-card">
+        <div class="rpt-card-head"><div class="rpt-card-title"><span class="rpt-ct-dot" style="background:var(--brand)"></span>Category Comparison vs Last Month</div></div>
+        <div class="rpt-card-body" id="rptCatComp"></div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-head"><div class="rpt-card-title"><span class="rpt-ct-dot" style="background:#3B82F6"></span>6-Month Spending Trend</div></div>
+        <div class="rpt-card-body"><div class="rpt-chart"><canvas id="rptTrendChart" role="img"></canvas></div></div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-head"><div class="rpt-card-title"><span class="rpt-ct-dot" style="background:#8B5CF6"></span>Category Trends</div></div>
+        <div class="rpt-card-body"><div class="rpt-chart"><canvas id="rptCatChart" role="img"></canvas></div></div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-head"><div class="rpt-card-title"><span class="rpt-ct-dot" style="background:#10B981"></span>AI Insights &amp; Suggestions</div></div>
+        <div class="rpt-card-body" id="rptInsights"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1225,6 +1350,171 @@ async function saveToSheet(){
     alert('Error saving: '+err.message);
     btn.disabled=false;
     btn.innerHTML='📊 Save Monthly Expense to Spreadsheet';
+  }
+}
+
+/* ── MONTHLY REPORT ─────────────────────────────────── */
+let rptTrendChart=null,rptCatChart=null;
+
+function openReport(){
+  document.getElementById('reportOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  renderReportContent();
+}
+function closeReport(e){
+  if(e&&e.target!==document.getElementById('reportOverlay'))return;
+  document.getElementById('reportOverlay').classList.remove('open');
+  document.body.style.overflow='';
+  if(rptTrendChart){rptTrendChart.destroy();rptTrendChart=null;}
+  if(rptCatChart){rptCatChart.destroy();rptCatChart=null;}
+}
+
+function renderReportContent(){
+  const m=getMonth(),pm=getPrevMonth(m);
+  const expenses=state.expenses[m]||[];
+  const prevExp=state.expenses[pm]||[];
+  const total=expenses.reduce((s,e)=>s+e.amount,0);
+  const prevTotal=prevExp.reduce((s,e)=>s+e.amount,0);
+  const diff=total-prevTotal;
+  const diffPct=prevTotal>0?Math.round(Math.abs(diff)/prevTotal*100):0;
+  const days=new Date(+m.split('-')[0],+m.split('-')[1],0).getDate();
+  const daily=total>0?Math.round(total/days):0;
+  const catTotals={};expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+e.amount;});
+  const prevCatTotals={};prevExp.forEach(e=>{prevCatTotals[e.cat]=(prevCatTotals[e.cat]||0)+e.amount;});
+  const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('rptMonth').textContent=monthLabel(m);
+
+  const sign=diff>0?'+':diff<0?'-':'';
+  const dColor=diff>0?'var(--red)':diff<0?'var(--green)':'var(--ink-3)';
+  const dArrow=diff>0?'↑':diff<0?'↓':'→';
+  document.getElementById('rptStats').innerHTML=`
+    <div class="rpt-stat rps-b"><div class="rpt-stat-ic">💰</div>
+      <div class="rpt-stat-lbl">Total Spent</div>
+      <div class="rpt-stat-val">₹${total.toLocaleString('en-IN')}</div>
+      <div class="rpt-stat-sub">${expenses.length} transactions</div></div>
+    <div class="rpt-stat ${diff>0?'rps-r':'rps-g'}"><div class="rpt-stat-ic">${dArrow}</div>
+      <div class="rpt-stat-lbl">vs Last Month</div>
+      <div class="rpt-stat-val" style="color:${dColor}">${sign}₹${Math.abs(diff).toLocaleString('en-IN')}</div>
+      <div class="rpt-stat-sub">${prevTotal>0?diffPct+'% change':'No prev data'}</div></div>
+    <div class="rpt-stat rps-a"><div class="rpt-stat-ic">📅</div>
+      <div class="rpt-stat-lbl">Daily Avg</div>
+      <div class="rpt-stat-val">₹${daily.toLocaleString('en-IN')}</div>
+      <div class="rpt-stat-sub">per day</div></div>
+    <div class="rpt-stat rps-v"><div class="rpt-stat-ic">${topCat?CAT_IC[topCat[0]]||'📦':'—'}</div>
+      <div class="rpt-stat-lbl">Top Category</div>
+      <div class="rpt-stat-val" style="font-size:${topCat&&topCat[0].length>7?'14px':'19px'}">${topCat?topCat[0]:'—'}</div>
+      <div class="rpt-stat-sub">${topCat?'₹'+topCat[1].toLocaleString('en-IN'):''}</div></div>`;
+
+  const allCats=[...new Set([...Object.keys(catTotals),...Object.keys(prevCatTotals)])];
+  const maxVal=Math.max(...allCats.map(c=>catTotals[c]||0),1);
+  document.getElementById('rptCatComp').innerHTML=allCats
+    .sort((a,b)=>(catTotals[b]||0)-(catTotals[a]||0))
+    .map(cat=>{
+      const cur=catTotals[cat]||0,prev=prevCatTotals[cat]||0;
+      const d=cur-prev;
+      const dPct=prev>0?Math.round(Math.abs(d)/prev*100):null;
+      const cls=d>0?'cmp-up':d<0?'cmp-down':'cmp-flat';
+      const arrow=d>0?'↑':d<0?'↓':'→';
+      const col=CATS[cat]||'#6B7280';
+      return `<div class="cmp-row">
+        <div class="cmp-ic" style="background:${col}20">${CAT_IC[cat]||'📦'}</div>
+        <div class="cmp-info"><div class="cmp-name">${cat}</div>
+          <div class="cmp-bar-track"><div class="cmp-bar-fill" style="width:${Math.round(cur/maxVal*100)}%;background:${col}"></div></div></div>
+        <div class="cmp-right">
+          <div class="cmp-amt">₹${cur.toLocaleString('en-IN')}</div>
+          <div class="cmp-delta ${cls}">${arrow} ${dPct!==null?dPct+'%':'new'}</div></div>
+      </div>`;
+    }).join('');
+
+  setTimeout(()=>renderReportCharts(),80);
+  fetchAIInsights(m,pm,expenses,prevExp,catTotals,prevCatTotals,total,prevTotal);
+}
+
+function renderReportCharts(){
+  const m=getMonth();
+  const allM=Object.keys(state.expenses).sort().slice(-6);
+  const mLabels=allM.map(k=>monthLabel(k));
+
+  if(rptTrendChart)rptTrendChart.destroy();
+  rptTrendChart=new Chart(document.getElementById('rptTrendChart'),{
+    type:'bar',
+    data:{labels:mLabels,datasets:[{
+      data:allM.map(k=>Math.round((state.expenses[k]||[]).reduce((s,e)=>s+e.amount,0))),
+      backgroundColor:allM.map(k=>k===m?'#5B5FED':'#C7D2FE'),borderRadius:8,borderSkipped:false
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' ₹'+ctx.parsed.y.toLocaleString('en-IN')},...TT}},
+      scales:{
+        x:{grid:{display:false},border:{display:false},ticks:{font:{size:10,family:'Inter'},color:'#8B90B3'}},
+        y:{grid:{color:'#EEF0F8'},border:{display:false},ticks:{callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'k':v),font:{size:10,family:'Inter'},color:'#8B90B3'}}
+      }}
+  });
+
+  const topCatsAll=Object.entries(
+    Object.values(state.expenses).flat().reduce((acc,e)=>{acc[e.cat]=(acc[e.cat]||0)+e.amount;return acc;},{})
+  ).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([c])=>c);
+
+  if(rptCatChart)rptCatChart.destroy();
+  rptCatChart=new Chart(document.getElementById('rptCatChart'),{
+    type:'line',
+    data:{labels:mLabels,datasets:topCatsAll.map(cat=>({
+      label:cat,
+      data:allM.map(k=>(state.expenses[k]||[]).filter(e=>e.cat===cat).reduce((s,e)=>s+e.amount,0)),
+      borderColor:CATS[cat]||'#6B7280',backgroundColor:(CATS[cat]||'#6B7280')+'18',
+      borderWidth:2,pointRadius:3,pointHoverRadius:5,tension:.35,fill:false
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{font:{size:10,family:'Inter'},boxWidth:10,padding:10,color:'#3D4166'}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ₹${ctx.parsed.y.toLocaleString('en-IN')}`},...TT}
+      },
+      scales:{
+        x:{grid:{display:false},border:{display:false},ticks:{font:{size:10,family:'Inter'},color:'#8B90B3'}},
+        y:{grid:{color:'#EEF0F8'},border:{display:false},ticks:{callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'k':v),font:{size:10,family:'Inter'},color:'#8B90B3'}}
+      }}
+  });
+}
+
+async function fetchAIInsights(m,pm,expenses,prevExp,catTotals,prevCatTotals,total,prevTotal){
+  const el=document.getElementById('rptInsights');
+  el.innerHTML=`<div class="ai-loading"><div class="ai-spinner"></div><div class="ai-loading-text">Generating AI insights…</div></div>`;
+  try{
+    const res=await fetch('/api/report-insights',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        currentMonth:monthLabel(m),previousMonth:monthLabel(pm),
+        currentData:{total,count:expenses.length,byCategory:catTotals},
+        previousData:{total:prevTotal,count:prevExp.length,byCategory:prevCatTotals}
+      })
+    });
+    const data=await res.json();
+    if(!data.success)throw new Error(data.error||'Failed to generate insights');
+    const {insights:ins}=data;
+    el.innerHTML=`
+      <div class="ai-section">
+        <div class="ai-section-title">📊 Executive Summary</div>
+        <p class="ai-summary">${ins.summary}</p>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-title">✦ Key Highlights</div>
+        <ul class="ai-list">${ins.highlights.map(h=>`<li>${h}</li>`).join('')}</ul>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-title">📈 Market Context</div>
+        <ul class="ai-list">${ins.marketContext.map(h=>`<li>${h}</li>`).join('')}</ul>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-title">💡 Improvement Suggestions</div>
+        <ul class="ai-list">${ins.suggestions.map(h=>`<li>${h}</li>`).join('')}</ul>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-title">✅ What You Did Well</div>
+        <div class="ai-positive">${ins.positiveNote}</div>
+      </div>`;
+  }catch(err){
+    el.innerHTML=`<div class="ai-error">Could not load AI insights: ${err.message}. Make sure GEMINI_API_KEY is set in Vercel environment variables.</div>`;
   }
 }
 
