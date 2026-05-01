@@ -43,7 +43,7 @@ Respond with a JSON object using exactly these keys:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+          generationConfig: { temperature: 0.7 },
         }),
       }
     );
