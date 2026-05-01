@@ -1,4 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2313151A'/><rect x='12' y='24' width='9' height='30' rx='3' fill='%237B8BFF'/><rect x='28' y='32' width='9' height='22' rx='3' fill='%237B8BFF' opacity='.82'/><rect x='44' y='40' width='9' height='14' rx='3' fill='%237B8BFF' opacity='.62'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -70,10 +71,9 @@ input,select,button{font-family:var(--ff);}
 }
 .brand{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink-2);}
 .brand-mark{
-  width:18px;height:18px;border-radius:var(--r-sm);
-  background:var(--ink-1);color:var(--bg);
+  width:20px;height:20px;border-radius:var(--r-sm);
+  background:var(--surface);border:1px solid var(--border);
   display:grid;place-items:center;
-  font-family:var(--ff-mono);font-size:11px;font-weight:800;
   flex-shrink:0;
 }
 .topbar-sep{color:var(--ink-4);}
@@ -697,7 +697,13 @@ kbd{
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="brand">
-      <span class="brand-mark">S</span>
+      <span class="brand-mark">
+        <svg width="12" height="12" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="12" y="24" width="9" height="30" rx="3" fill="#7B8BFF"/>
+          <rect x="28" y="32" width="9" height="22" rx="3" fill="#7B8BFF" opacity="0.82"/>
+          <rect x="44" y="40" width="9" height="14" rx="3" fill="#7B8BFF" opacity="0.62"/>
+        </svg>
+      </span>
       spendwise
       <span class="topbar-sep">/</span>
       <button class="brand-month" id="monthLabel" onclick="openMonthPicker()" title="Pick month">2026-04</button>
