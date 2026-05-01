@@ -36,7 +36,7 @@ Respond with a JSON object using exactly these keys:
 }`;
 
   try {
-    // Auto-discover available models for this API key
+    // Discover models available for this key
     const listRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
     );
@@ -50,41 +50,58 @@ Respond with a JSON object using exactly these keys:
       .map(m => m.name.replace('models/', ''));
 
     const preferred = [
-      'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro',
+      'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro',
       'gemini-1.0-pro', 'gemini-pro',
     ];
-    const model =
-      preferred.find(p => available.some(a => a === p || a.startsWith(p + '-'))) ||
-      available[0];
+    const modelsToTry = [
+      ...preferred.filter(p => available.some(a => a === p || a.startsWith(p + '-'))),
+      ...available.filter(a => !preferred.some(p => a === p || a.startsWith(p + '-'))),
+    ];
 
-    if (!model) throw new Error(`No usable Gemini models found. Available: ${available.join(', ')}`);
+    if (modelsToTry.length === 0)
+      throw new Error(`No usable models found. Available: ${available.join(', ')}`);
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7 },
-        }),
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7 },
+          }),
+        }
+      );
+
+      // Skip quota-blocked or unavailable models and try the next
+      if (response.status === 429 || response.status === 404) {
+        lastError = `${model}: HTTP ${response.status}`;
+        continue;
       }
-    );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini API error ${response.status}: ${errText}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Gemini API error ${response.status}: ${errText}`);
+      }
+
+      const result = await response.json();
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Empty response from Gemini');
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse Gemini response as JSON');
+
+      const insights = JSON.parse(jsonMatch[0]);
+      return res.status(200).json({ success: true, insights, model });
     }
 
-    const result = await response.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Empty response from Gemini');
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Could not parse Gemini response as JSON');
-
-    const insights = JSON.parse(jsonMatch[0]);
-    return res.status(200).json({ success: true, insights, model });
+    throw new Error(
+      `All models exhausted (quota or unavailable). Tried: ${modelsToTry.join(', ')}. ` +
+      `Last error: ${lastError}. Your API key may need billing enabled at https://ai.google.dev`
+    );
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
