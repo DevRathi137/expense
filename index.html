@@ -487,6 +487,15 @@ input,select,button{font-family:var(--ff);}
 .psn-bar-fill{height:100%;border-radius:99px;}
 .psn-pct{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);}
 
+/* ── SETTLEMENT ──────────────────────────────────────── */
+.settle-row{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border-lt);}
+.settle-row:last-child{border-bottom:none;}
+.settle-av{width:20px;height:20px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-family:var(--ff-mono);font-size:9px;font-weight:700;color:var(--bg);flex-shrink:0;}
+.settle-name{font-family:var(--ff-mono);font-size:12px;font-weight:500;color:var(--ink-1);min-width:60px;}
+.settle-arrow{font-family:var(--ff-mono);font-size:14px;color:var(--green);flex-shrink:0;}
+.settle-amt{font-family:var(--ff-mono);font-size:13px;font-weight:600;color:var(--green);margin-left:auto;font-variant-numeric:tabular-nums;}
+.paidby-badge{font-family:var(--ff-mono);font-size:10px;color:var(--brand);background:var(--brand-lt);padding:1px 5px;border-radius:var(--r-sm);flex-shrink:0;}
+
 /* ── WISHLIST ────────────────────────────────────────── */
 .wish-prog{padding:10px 16px 0;}
 .wish-prog-lbl{display:flex;justify-content:space-between;font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);margin-bottom:6px;}
@@ -792,6 +801,12 @@ kbd{
                 <option value="Other">Other</option>
               </select>
             </div>
+            <div class="f-wrap" style="min-width:110px;">
+              <span class="f-lbl">paid by</span>
+              <select class="fc" id="newPaidBy">
+                <option value="">— unknown —</option>
+              </select>
+            </div>
             <div class="f-wrap f-shrink" style="justify-content:flex-end;">
               <span class="f-lbl">&nbsp;</span>
               <button class="btn-add" onclick="addExpense()" style="width:auto;padding:0 18px;">+ add</button>
@@ -857,6 +872,10 @@ kbd{
       <div class="card">
         <div class="card-head"><span class="card-title">summary</span></div>
         <div class="psn-grid" id="personSummary"></div>
+      </div>
+      <div class="card" id="settlementCard">
+        <div class="card-head"><span class="card-title">settlement</span><span style="font-family:var(--ff-mono);font-size:10px;color:var(--ink-4);">who pays whom</span></div>
+        <div id="settlementBody"></div>
       </div>
     </div>
 
@@ -998,6 +1017,13 @@ let currentMonth = (()=>{const n=new Date();return `${n.getFullYear()}-${String(
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function getMonth(){return currentMonth;}
+function paidByOptions(sel=''){
+  return '<option value="">— unknown —</option>'+state.people.map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${escHtml(p.name)}</option>`).join('');
+}
+function populatePaidBySelects(){
+  document.querySelectorAll('.paid-by-sel').forEach(el=>{const cur=el.value;el.innerHTML=paidByOptions(cur);});
+  const nb=document.getElementById('newPaidBy');if(nb){const cur=nb.value;nb.innerHTML=paidByOptions(cur);}
+}
 
 function shiftMonth(d){
   const[y,mo]=currentMonth.split('-').map(Number);
@@ -1070,12 +1096,18 @@ function renderExpCard(expenses){
       const isOpen=expandedExp.has(exp.id);
       const entries=exp.entries||[];
       const entryRows=entries.length>0
-        ?entries.map(en=>`<div class="entry-row">
+        ?entries.map(en=>{
+          const payer=en.paidBy?state.people.find(p=>p.id===en.paidBy):null;
+          const pi=payer?state.people.indexOf(payer):-1;
+          const pcol=pi>=0?PCOLS[pi%PCOLS.length]:null;
+          return `<div class="entry-row">
             <span class="entry-date">${fmtDate(en.date)}</span>
             <span class="entry-note">${en.note?escHtml(en.note):'<span style="color:var(--ink-4)">—</span>'}</span>
+            ${payer?`<span class="paidby-badge" style="background:${pcol}20;color:${pcol};">${escHtml(payer.name)}</span>`:''}
             <span class="entry-amt">&#8377;${en.amount.toLocaleString('en-IN')}</span>
             <button class="btn-del-sm" onclick="deleteEntry('${exp.id}','${en.id}');event.stopPropagation()" title="Remove">&#10005;</button>
-          </div>`).join('')
+          </div>`;
+        }).join('')
         :`<div style="padding:10px 16px 10px 42px;font-family:var(--ff-mono);font-size:11px;color:var(--ink-4);background:var(--surface-2);">no entries yet — add one below.</div>`;
       return `<div class="exp-item" id="exp-item-${exp.id}">
         <div class="exp-row exp-main-row" data-cat="${escHtml(exp.cat)}" onclick="toggleExpand('${exp.id}')">
@@ -1100,6 +1132,7 @@ function renderExpCard(expenses){
             </div>
             <input class="entry-fc entry-fc-note" type="text" id="en-${exp.id}" placeholder="Note (optional)"
               onkeydown="if(event.key==='Enter')addEntry('${exp.id}')">
+            <select class="entry-fc paid-by-sel" id="ep-${exp.id}" style="flex:0 0 100px;">${paidByOptions()}</select>
             <button class="btn-entry-add" onclick="addEntry('${exp.id}')">+ add</button>
           </div>
         </div>
@@ -1112,11 +1145,12 @@ function addExpense(){
   const name=document.getElementById('newName').value.trim();
   const amt =parseFloat(document.getElementById('newAmt').value);
   const cat =document.getElementById('newCat').value;
+  const paidBy=document.getElementById('newPaidBy')?.value||'';
   if(!name||isNaN(amt)||amt<=0)return;
   const m=getMonth();
   if(!state.expenses[m])state.expenses[m]=[];
   const id=genId();
-  state.expenses[m].push({id,name,cat,entries:[{id:genId(),date:todayStr(),amount:amt,note:''}]});
+  state.expenses[m].push({id,name,cat,entries:[{id:genId(),date:todayStr(),amount:amt,note:'',paidBy}]});
   document.getElementById('newName').value='';
   document.getElementById('newAmt').value='';
   expandedExp.add(id);
@@ -1141,8 +1175,9 @@ function addEntry(expId){
   const date=document.getElementById('ed-'+expId)?.value||todayStr();
   const amt=parseFloat(document.getElementById('ea-'+expId)?.value);
   const note=(document.getElementById('en-'+expId)?.value||'').trim();
+  const paidBy=document.getElementById('ep-'+expId)?.value||'';
   if(isNaN(amt)||amt<=0)return;
-  exp.entries.push({id:genId(),date,amount:amt,note});
+  exp.entries.push({id:genId(),date,amount:amt,note,paidBy});
   const eaEl=document.getElementById('ea-'+expId);
   const enEl=document.getElementById('en-'+expId);
   if(eaEl)eaEl.value='';
@@ -1196,12 +1231,12 @@ function addPerson(){
   if(!name)return;
   state.people.push({id:genId(),name});
   document.getElementById('personName').value='';
-  saveState();renderSplit();
+  saveState();renderSplit();populatePaidBySelects();
 }
 function removePerson(id){
   state.people=state.people.filter(p=>p.id!==id);
   Object.values(state.splits).forEach(ms=>Object.values(ms).forEach(sp=>delete sp[id]));
-  saveState();renderSplit();
+  saveState();renderSplit();populatePaidBySelects();
 }
 function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 
@@ -1286,6 +1321,68 @@ function updatePsnSummary(){
     </div>`);
   }
   el.innerHTML=rows.join('');
+  renderSettlement();
+}
+
+/* ── SETTLEMENT ─────────────────────────────────────── */
+function calcSettlement(){
+  const m=getMonth();
+  const expenses=state.expenses[m]||[];
+  const splits=state.splits[m]||{};
+  const net={};
+  state.people.forEach(p=>{net[p.id]=0;});
+  expenses.forEach(e=>{
+    (e.entries||[]).forEach(en=>{
+      if(en.paidBy&&net[en.paidBy]!==undefined)net[en.paidBy]+=(en.amount||0);
+    });
+  });
+  expenses.forEach(e=>{
+    const sp=splits[e.id]||{};
+    state.people.forEach(p=>{if(sp[p.id])net[p.id]-=sp[p.id];});
+  });
+  const creditors=state.people.filter(p=>net[p.id]>0.5).map(p=>({...p,amt:net[p.id]}));
+  const debtors=state.people.filter(p=>net[p.id]<-0.5).map(p=>({...p,amt:-net[p.id]}));
+  const txns=[];
+  let ci=0,di=0;
+  const creds=creditors.map(c=>({...c}));
+  const debts=debtors.map(d=>({...d}));
+  while(ci<creds.length&&di<debts.length){
+    const c=creds[ci],d=debts[di];
+    const amt=Math.min(c.amt,d.amt);
+    txns.push({from:d,to:c,amt:Math.round(amt)});
+    c.amt-=amt;d.amt-=amt;
+    if(c.amt<0.5)ci++;
+    if(d.amt<0.5)di++;
+  }
+  return txns;
+}
+
+function renderSettlement(){
+  const el=document.getElementById('settlementBody');
+  if(!el)return;
+  if(state.people.length<2){
+    el.innerHTML='<div class="empty"><div class="empty-title">add at least 2 people and assign splits</div></div>';
+    return;
+  }
+  const txns=calcSettlement();
+  if(txns.length===0){
+    el.innerHTML='<div class="empty"><div class="empty-title">all settled up</div><div class="empty-desc">Everyone\'s share is balanced. No payments needed.</div></div>';
+    return;
+  }
+  el.innerHTML=txns.map(t=>{
+    const fi=state.people.indexOf(state.people.find(p=>p.id===t.from.id));
+    const ti=state.people.indexOf(state.people.find(p=>p.id===t.to.id));
+    const fc=PCOLS[fi>=0?fi%PCOLS.length:0];
+    const tc=PCOLS[ti>=0?ti%PCOLS.length:1];
+    return `<div class="settle-row">
+      <div class="settle-av" style="background:${fc}">${initials(t.from.name)}</div>
+      <span class="settle-name">${escHtml(t.from.name)}</span>
+      <span class="settle-arrow">→</span>
+      <div class="settle-av" style="background:${tc}">${initials(t.to.name)}</div>
+      <span class="settle-name">${escHtml(t.to.name)}</span>
+      <span class="settle-amt">&#8377;${t.amt.toLocaleString('en-IN')}</span>
+    </div>`;
+  }).join('');
 }
 
 /* ── RENDER SPLIT ───────────────────────────────────── */
@@ -1338,6 +1435,7 @@ function renderSplit(){
     tbl.innerHTML=thead+tbody;
   }
   updatePsnSummary();
+  renderSettlement();
 }
 
 /* ── CHARTS ─────────────────────────────────────────── */
@@ -1531,6 +1629,7 @@ function render(){
   }
 
   if(document.getElementById('pane-split').classList.contains('active'))renderSplit();
+  populatePaidBySelects();
 }
 
 /* ── TAB SWITCH ─────────────────────────────────────── */
