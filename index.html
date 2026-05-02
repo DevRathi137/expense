@@ -1074,6 +1074,8 @@ function saveState(){try{localStorage.setItem('expTrackerV5',JSON.stringify(stat
 
 /* ── EXPENSE ITEM HELPERS ───────────────────────────── */
 let expandedExp=new Set();
+let editingExp=new Set();
+let editingEntry=new Set();
 function expTotal(exp){return(exp.entries||[]).reduce((s,e)=>s+(e.amount||0),0);}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(d){try{const dt=new Date(d+'T00:00:00');return dt.toLocaleString('default',{month:'short',day:'numeric'});}catch{return d;}}
@@ -1094,34 +1096,69 @@ function renderExpCard(expenses){
     ${expenses.map(exp=>{
       const total=expTotal(exp);
       const isOpen=expandedExp.has(exp.id);
+      const isEditingH=editingExp.has(exp.id);
       const entries=exp.entries||[];
+
       const entryRows=entries.length>0
         ?entries.map(en=>{
           const payer=en.paidBy?state.people.find(p=>p.id===en.paidBy):null;
           const pi=payer?state.people.indexOf(payer):-1;
           const pcol=pi>=0?PCOLS[pi%PCOLS.length]:null;
+          if(editingEntry.has(en.id)){
+            return `<div class="entry-row" style="flex-wrap:wrap;gap:6px;background:var(--surface-3);">
+              <input class="entry-fc entry-fc-date" type="date" id="eed-${en.id}" value="${en.date}">
+              <div style="position:relative;flex:0 0 82px;">
+                <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-family:var(--ff-mono);font-size:12px;color:var(--ink-3);pointer-events:none;">&#8377;</span>
+                <input class="entry-fc entry-fc-amt" type="number" id="eea-${en.id}" value="${en.amount}" min="0" style="padding-left:20px;width:100%"
+                  onkeydown="if(event.key==='Enter')saveEditEntry('${exp.id}','${en.id}');if(event.key==='Escape')cancelEditEntry('${en.id}')">
+              </div>
+              <input class="entry-fc entry-fc-note" type="text" id="een-${en.id}" value="${escHtml(en.note||'')}" placeholder="Note"
+                onkeydown="if(event.key==='Enter')saveEditEntry('${exp.id}','${en.id}');if(event.key==='Escape')cancelEditEntry('${en.id}')">
+              <select class="entry-fc paid-by-sel" id="eep-${en.id}" style="flex:0 0 100px;">${paidByOptions(en.paidBy||'')}</select>
+              <button class="btn-entry-add" onclick="saveEditEntry('${exp.id}','${en.id}')">save</button>
+              <button class="btn-del-sm" onclick="cancelEditEntry('${en.id}')" title="Cancel">&#10005;</button>
+            </div>`;
+          }
           return `<div class="entry-row">
             <span class="entry-date">${fmtDate(en.date)}</span>
             <span class="entry-note">${en.note?escHtml(en.note):'<span style="color:var(--ink-4)">—</span>'}</span>
             ${payer?`<span class="paidby-badge" style="background:${pcol}20;color:${pcol};">${escHtml(payer.name)}</span>`:''}
             <span class="entry-amt">&#8377;${en.amount.toLocaleString('en-IN')}</span>
+            <button class="btn-del-sm" onclick="startEditEntry('${en.id}');event.stopPropagation()" title="Edit" style="color:var(--brand);">&#9998;</button>
             <button class="btn-del-sm" onclick="deleteEntry('${exp.id}','${en.id}');event.stopPropagation()" title="Remove">&#10005;</button>
           </div>`;
         }).join('')
         :`<div style="padding:10px 16px 10px 42px;font-family:var(--ff-mono);font-size:11px;color:var(--ink-4);background:var(--surface-2);">no entries yet — add one below.</div>`;
+
+      const catOpts=Object.keys(CATS).map(c=>`<option value="${c}"${exp.cat===c?' selected':''}>${c}</option>`).join('');
+      const headerHtml=isEditingH
+        ?`<div class="exp-row" data-cat="${escHtml(exp.cat)}" style="background:var(--surface-3);" onclick="event.stopPropagation()">
+            <div class="exp-info" style="display:flex;gap:6px;align-items:center;">
+              <input class="entry-fc" type="text" id="ename-${exp.id}" value="${escHtml(exp.name)}" style="flex:2;min-width:80px;height:26px;font-size:12px;"
+                onkeydown="if(event.key==='Enter')saveEditExp('${exp.id}');if(event.key==='Escape')cancelEditExp('${exp.id}')">
+              <select class="entry-fc" id="ecat-${exp.id}" style="flex:1;min-width:90px;height:26px;font-size:12px;">${catOpts}</select>
+            </div>
+            <div class="exp-right">
+              <button class="btn-entry-add" onclick="saveEditExp('${exp.id}')" style="height:26px;font-size:10px;">save</button>
+              <button class="btn-del" onclick="cancelEditExp('${exp.id}')" title="Cancel">&#10005;</button>
+            </div>
+          </div>`
+        :`<div class="exp-row exp-main-row" data-cat="${escHtml(exp.cat)}" onclick="toggleExpand('${exp.id}')">
+            <div class="exp-info">
+              <div class="exp-name">${escHtml(exp.name)}</div>
+              <div class="exp-cat">${exp.cat.toLowerCase()}${entries.length?`<span class="exp-count">${entries.length}</span>`:''}${exp.fromWish?'<span class="exp-tag" style="margin-left:6px">wish</span>':''}</div>
+            </div>
+            <div class="exp-right">
+              <span class="exp-amt">&#8377;${total.toLocaleString('en-IN')}</span>
+              <span class="exp-chevron ${isOpen?'open':''}">&#8250;</span>
+              <button class="btn-del" onclick="startEditExp('${exp.id}');event.stopPropagation()" title="Edit" style="color:var(--brand);">&#9998;</button>
+              <button class="btn-del" onclick="deleteExpense('${exp.id}');event.stopPropagation()" title="Remove">&#10005;</button>
+            </div>
+          </div>`;
+
       return `<div class="exp-item" id="exp-item-${exp.id}">
-        <div class="exp-row exp-main-row" data-cat="${escHtml(exp.cat)}" onclick="toggleExpand('${exp.id}')">
-          <div class="exp-info">
-            <div class="exp-name">${escHtml(exp.name)}</div>
-            <div class="exp-cat">${exp.cat.toLowerCase()}${entries.length?`<span class="exp-count">${entries.length}</span>`:''}${exp.fromWish?'<span class="exp-tag" style="margin-left:6px">wish</span>':''}</div>
-          </div>
-          <div class="exp-right">
-            <span class="exp-amt">&#8377;${total.toLocaleString('en-IN')}</span>
-            <span class="exp-chevron ${isOpen?'open':''}">&#8250;</span>
-            <button class="btn-del" onclick="deleteExpense('${exp.id}');event.stopPropagation()" title="Remove">&#10005;</button>
-          </div>
-        </div>
-        <div class="exp-entries ${isOpen?'open':''}" id="entries-${exp.id}">
+        ${headerHtml}
+        <div class="exp-entries ${isOpen||isEditingH?'open':''}" id="entries-${exp.id}">
           ${entryRows}
           <div class="entry-add-form">
             <input class="entry-fc entry-fc-date" type="date" id="ed-${exp.id}" value="${todayStr()}">
@@ -1189,6 +1226,40 @@ function deleteEntry(expId,entryId){
   const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
   if(!exp)return;
   exp.entries=exp.entries.filter(en=>en.id!==entryId);
+  saveState();render();
+}
+
+function startEditExp(expId){editingExp.add(expId);expandedExp.add(expId);renderExpCard(state.expenses[getMonth()]||[]);}
+function cancelEditExp(expId){editingExp.delete(expId);renderExpCard(state.expenses[getMonth()]||[]);}
+function saveEditExp(expId){
+  const m=getMonth();
+  const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
+  if(!exp)return;
+  const name=(document.getElementById('ename-'+expId)?.value||'').trim();
+  const cat=document.getElementById('ecat-'+expId)?.value;
+  if(name)exp.name=name;
+  if(cat)exp.cat=cat;
+  editingExp.delete(expId);
+  saveState();render();
+}
+
+function startEditEntry(entryId){editingEntry.add(entryId);renderExpCard(state.expenses[getMonth()]||[]);}
+function cancelEditEntry(entryId){editingEntry.delete(entryId);renderExpCard(state.expenses[getMonth()]||[]);}
+function saveEditEntry(expId,entryId){
+  const m=getMonth();
+  const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
+  if(!exp)return;
+  const en=exp.entries.find(e=>e.id===entryId);
+  if(!en)return;
+  const date=document.getElementById('eed-'+entryId)?.value||en.date;
+  const amt=parseFloat(document.getElementById('eea-'+entryId)?.value);
+  const note=(document.getElementById('een-'+entryId)?.value||'').trim();
+  const paidBy=document.getElementById('eep-'+entryId)?.value||'';
+  en.date=date;
+  if(!isNaN(amt)&&amt>0)en.amount=amt;
+  en.note=note;
+  en.paidBy=paidBy;
+  editingEntry.delete(entryId);
   saveState();render();
 }
 
