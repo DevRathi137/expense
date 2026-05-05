@@ -1088,6 +1088,7 @@ function saveState(){try{localStorage.setItem('expTrackerV5',JSON.stringify(stat
 let expandedExp=new Set();
 let editingExp=new Set();
 let editingEntry=new Set();
+let editingWish=new Set();
 function expTotal(exp){return(exp.entries||[]).reduce((s,e)=>s+(e.amount||0),0);}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(d){try{const dt=new Date(d+'T00:00:00');return dt.toLocaleString('default',{month:'short',day:'numeric'});}catch{return d;}}
@@ -1305,6 +1306,25 @@ function deleteWish(id){
   const m=getMonth();
   state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.fromWish!==id);
   state.wishlist=state.wishlist.filter(w=>w.id!==id);
+  saveState();render();
+}
+function startEditWish(id){editingWish.add(id);render();}
+function cancelEditWish(id){editingWish.delete(id);render();}
+function saveEditWish(id){
+  const w=state.wishlist.find(w=>w.id===id);
+  if(!w)return;
+  const name=(document.getElementById('wname-'+id)?.value||'').trim();
+  const cost=parseFloat(document.getElementById('wcost-'+id)?.value)||0;
+  const cat=document.getElementById('wcat-'+id)?.value||w.cat;
+  const type=document.getElementById('wtype-'+id)?.value||w.type;
+  if(name)w.name=name;
+  w.cost=cost;
+  w.cat=cat;
+  w.type=type;
+  const m=getMonth();
+  const linked=state.expenses[m]&&state.expenses[m].find(e=>e.fromWish===id);
+  if(linked){linked.name=w.name;linked.cat=w.cat;}
+  editingWish.delete(id);
   saveState();render();
 }
 
@@ -1748,20 +1768,42 @@ function render(){
       <div class="empty"><div class="empty-title">wish list is empty</div><div class="empty-desc">Add things you want to buy. Checking an item adds it to this month's expenses.</div></div>`;
   }else{
     const pct=wTotal>0?Math.round(wDone/wTotal*100):0;
-    const rows=[...pending,...done].map(w=>`<div class="wish-row ${w.done?'checked':''}">
-      <input class="wish-cb" type="checkbox" ${w.done?'checked':''} onchange="toggleWish('${w.id}')"/>
-      <div class="wish-info">
-        <div class="wish-name">${escHtml(w.name)}</div>
-        <div class="wish-meta">
-          <span class="tag ${w.type==='need'?'tag-need':'tag-want'}">${w.type}</span>
-          <span style="font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);">${w.cat.toLowerCase()}</span>
+    const catOpts=c=>Object.keys(CATS).map(k=>`<option value="${k}"${k===c?' selected':''}>${k}</option>`).join('');
+    const rows=[...pending,...done].map(w=>{
+      if(editingWish.has(w.id)){
+        return `<div class="wish-row" style="flex-wrap:wrap;gap:8px;background:var(--surface-3);">
+          <input class="entry-fc" type="text" id="wname-${w.id}" value="${escHtml(w.name)}" placeholder="Item name" style="flex:2;min-width:120px;height:28px;font-size:12px;"
+            onkeydown="if(event.key==='Enter')saveEditWish('${w.id}');if(event.key==='Escape')cancelEditWish('${w.id}')">
+          <div style="position:relative;flex:0 0 90px;">
+            <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-family:var(--ff-mono);font-size:12px;color:var(--ink-3);pointer-events:none;">&#8377;</span>
+            <input class="entry-fc" type="number" id="wcost-${w.id}" value="${w.cost||''}" placeholder="0" min="0" style="padding-left:22px;width:100%;height:28px;font-size:12px;"
+              onkeydown="if(event.key==='Enter')saveEditWish('${w.id}');if(event.key==='Escape')cancelEditWish('${w.id}')">
+          </div>
+          <select class="entry-fc" id="wcat-${w.id}" style="flex:1;min-width:90px;height:28px;font-size:12px;">${catOpts(w.cat)}</select>
+          <select class="entry-fc" id="wtype-${w.id}" style="flex:0 0 70px;height:28px;font-size:12px;">
+            <option value="want"${w.type==='want'?' selected':''}>want</option>
+            <option value="need"${w.type==='need'?' selected':''}>need</option>
+          </select>
+          <button class="btn-entry-add" onclick="saveEditWish('${w.id}')" style="height:28px;font-size:11px;">save</button>
+          <button class="btn-del-sm" onclick="cancelEditWish('${w.id}')" title="Cancel">&#10005;</button>
+        </div>`;
+      }
+      return `<div class="wish-row ${w.done?'checked':''}">
+        <input class="wish-cb" type="checkbox" ${w.done?'checked':''} onchange="toggleWish('${w.id}')"/>
+        <div class="wish-info">
+          <div class="wish-name">${escHtml(w.name)}</div>
+          <div class="wish-meta">
+            <span class="tag ${w.type==='need'?'tag-need':'tag-want'}">${w.type}</span>
+            <span style="font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);">${w.cat.toLowerCase()}</span>
+          </div>
         </div>
-      </div>
-      <div class="wish-right">
-        ${w.cost>0?`<span class="wish-cost">&#8377;${w.cost.toLocaleString('en-IN')}</span>`:''}
-        <button class="btn-del" onclick="deleteWish('${w.id}')" title="Remove">&#10005;</button>
-      </div>
-    </div>`).join('');
+        <div class="wish-right">
+          ${w.cost>0?`<span class="wish-cost">&#8377;${w.cost.toLocaleString('en-IN')}</span>`:''}
+          <button class="btn-del" onclick="startEditWish('${w.id}')" title="Edit" style="color:var(--brand);">&#9998;</button>
+          <button class="btn-del" onclick="deleteWish('${w.id}')" title="Remove">&#10005;</button>
+        </div>
+      </div>`;
+    }).join('');
     wishCard.innerHTML=`<div class="card-head"><span class="card-title">wish list</span><span class="card-badge">${wDone}/${wTotal} done</span></div>
       <div class="wish-prog">
         <div class="wish-prog-lbl"><span>${wDone} of ${wTotal} fulfilled</span><span>${pct}%</span></div>
