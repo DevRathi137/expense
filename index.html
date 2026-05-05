@@ -504,6 +504,7 @@ input,select,button{font-family:var(--ff);}
 .settle-rem.partial{color:var(--amber);}
 .settle-rem.none{color:var(--ink-3);}
 .settle-done-badge{font-family:var(--ff-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:var(--r-sm);background:var(--green-lt);color:var(--green);}
+.settle-overpaid{font-family:var(--ff-mono);font-size:10px;font-weight:600;color:var(--amber);background:rgba(242,193,102,.12);padding:3px 8px;border-radius:var(--r-sm);margin-top:2px;text-align:right;}
 .paidby-badge{font-family:var(--ff-mono);font-size:10px;color:var(--brand);background:var(--brand-lt);padding:1px 5px;border-radius:var(--r-sm);flex-shrink:0;}
 
 /* ── WISHLIST ────────────────────────────────────────── */
@@ -1446,18 +1447,24 @@ function updateSettledAmt(key,raw){
   if(!isNaN(val)&&val>=0)state.settlements[m][key]=val;
   else delete state.settlements[m][key];
   saveState();
-  /* update just the dynamic parts without full re-render */
   const txns=calcSettlement();
   txns.forEach(t=>{
     const k=t.from.id+'_'+t.to.id;
     if(k!==key)return;
-    const settled=Math.min((state.settlements[m]||{})[k]||0,t.amt);
-    const rem=Math.round(t.amt-settled);
+    const paid=(state.settlements[m]||{})[k]||0;
+    const rem=Math.round(t.amt-paid);
+    const over=paid>t.amt?Math.round(paid-t.amt):0;
     const remEl=document.getElementById('srem-'+k);
+    const overEl=document.getElementById('sover-'+k);
     if(remEl){
-      if(rem<=0){remEl.textContent='fully settled';remEl.className='settle-rem done';}
-      else if(settled>0){remEl.textContent='&#8377;'+rem.toLocaleString('en-IN')+' remaining';remEl.className='settle-rem partial';remEl.innerHTML='&#8377;'+rem.toLocaleString('en-IN')+' remaining';}
-      else{remEl.textContent='';remEl.className='settle-rem none';}
+      if(rem<=0&&!over){remEl.innerHTML='<span class="settle-done-badge">settled</span>';remEl.className='settle-rem done';}
+      else if(rem>0&&paid>0){remEl.innerHTML='&#8377;'+rem.toLocaleString('en-IN')+' remaining';remEl.className='settle-rem partial';}
+      else if(rem>0){remEl.innerHTML='';remEl.className='settle-rem none';}
+      else{remEl.innerHTML='<span class="settle-done-badge">settled</span>';remEl.className='settle-rem done';}
+    }
+    if(overEl){
+      overEl.style.display=over>0?'':'none';
+      overEl.innerHTML=over>0?`&#8377;${over.toLocaleString('en-IN')} overpaid — <b>${escHtml(t.to.name)}</b> owes <b>${escHtml(t.from.name)}</b> back`:'';
     }
   });
 }
@@ -1482,34 +1489,42 @@ function renderSettlement(){
     const fc=PCOLS[fi>=0?fi%PCOLS.length:0];
     const tc=PCOLS[ti>=0?ti%PCOLS.length:1];
     const key=t.from.id+'_'+t.to.id;
-    const paidSoFar=Math.min(settled[key]||0,t.amt);
-    const rem=Math.round(t.amt-paidSoFar);
-    const remHtml=rem<=0
-      ?`<span class="settle-done-badge">settled</span>`
-      :paidSoFar>0
+    const paid=settled[key]||0;
+    const rem=Math.round(t.amt-paid);
+    const over=paid>t.amt?Math.round(paid-t.amt):0;
+    const fullyDone=rem<=0&&!over;
+    const remHtml=fullyDone
+      ?`<span class="settle-done-badge" id="srem-${key}">settled</span>`
+      :rem<t.amt&&rem>0
         ?`<span class="settle-rem partial" id="srem-${key}">&#8377;${rem.toLocaleString('en-IN')} remaining</span>`
         :`<span class="settle-rem none" id="srem-${key}"></span>`;
-    return `<div class="settle-row" style="${rem<=0?'opacity:.55;':''}">
-      <div class="settle-av" style="background:${fc}">${initials(t.from.name)}</div>
-      <span class="settle-name">${escHtml(t.from.name)}</span>
-      <span class="settle-arrow" style="${rem<=0?'color:var(--green)':''}">→</span>
-      <div class="settle-av" style="background:${tc}">${initials(t.to.name)}</div>
-      <span class="settle-name">${escHtml(t.to.name)}</span>
+    const overHtml=`<div class="settle-overpaid" id="sover-${key}" style="${over>0?'':'display:none'}">
+      &#8377;${over.toLocaleString('en-IN')} overpaid — <b>${escHtml(t.to.name)}</b> owes <b>${escHtml(t.from.name)}</b> back
+    </div>`;
+    return `<div class="settle-row" style="flex-wrap:wrap;${fullyDone?'opacity:.55;':''}">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <div class="settle-av" style="background:${fc}">${initials(t.from.name)}</div>
+        <span class="settle-name">${escHtml(t.from.name)}</span>
+        <span class="settle-arrow">→</span>
+        <div class="settle-av" style="background:${tc}">${initials(t.to.name)}</div>
+        <span class="settle-name">${escHtml(t.to.name)}</span>
+      </div>
       <div class="settle-right">
         <div style="display:flex;align-items:center;gap:6px;">
-          <span class="settle-amt" style="${rem<=0?'text-decoration:line-through;color:var(--ink-3);':''}">&#8377;${t.amt.toLocaleString('en-IN')}</span>
+          <span class="settle-amt" style="${fullyDone?'text-decoration:line-through;color:var(--ink-3);':''}">&#8377;${t.amt.toLocaleString('en-IN')}</span>
         </div>
         <div class="settle-paid-row">
           <span class="settle-paid-lbl">settled</span>
           <div style="position:relative;">
             <span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);font-family:var(--ff-mono);font-size:11px;color:var(--ink-3);pointer-events:none;">&#8377;</span>
-            <input class="settle-input" type="number" min="0" step="1" max="${t.amt}"
-              value="${paidSoFar>0?paidSoFar:''}" placeholder="0"
+            <input class="settle-input" type="number" min="0" step="1"
+              value="${paid>0?paid:''}" placeholder="0"
               oninput="updateSettledAmt('${key}',this.value)">
           </div>
           ${remHtml}
         </div>
       </div>
+      ${overHtml}
     </div>`;
   }).join('');
 }
