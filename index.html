@@ -578,6 +578,7 @@ kbd{
   cursor:pointer;transition:border-color .15s,color .15s;
 }
 .btn-report:hover{border-color:var(--ink-3);color:var(--ink-1);}
+.btn-report:disabled{opacity:.45;cursor:not-allowed;}
 .btn-save-sheet{
   flex:0 0 auto;height:28px;padding:0 14px;
   background:var(--ink-1);color:var(--bg);
@@ -949,6 +950,7 @@ kbd{
     <kbd>R</kbd><span class="bar-hint">report</span>
     <span class="bar-spacer"></span>
     <button class="btn-report" onclick="openReport()">monthly report</button>
+    <button class="btn-report" id="exportReportBtn" onclick="exportReport()">export report</button>
     <button class="btn-save-sheet" id="saveSheetBtn" onclick="saveToSheet()">save to sheet</button>
   </div>
 
@@ -1856,6 +1858,136 @@ async function saveToSheet(){
     alert('Error saving: '+err.message);
     btn.disabled=false;
     btn.textContent='save to sheet';
+  }
+}
+
+/* ── EXPORT REPORT ──────────────────────────────────── */
+async function exportReport(){
+  const m=getMonth();
+  const expenses=state.expenses[m]||[];
+  if(expenses.length===0){alert('No expenses to export for '+monthLabel(m)+'.');return;}
+  const btn=document.getElementById('exportReportBtn');
+  btn.disabled=true;btn.textContent='building…';
+  try{
+    const catTotals={};
+    expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+expTotal(e);});
+    const cats=Object.keys(catTotals);
+    const colors=cats.map(c=>CATS[c]||'#62677A');
+    const total=expenses.reduce((s,e)=>s+expTotal(e),0);
+    const budget=state.budget||30000;
+    const days=new Date(+m.split('-')[0],+m.split('-')[1],0).getDate();
+    const daily=total>0?Math.round(total/days):0;
+    const allM=Object.keys(state.expenses).sort().slice(-6);
+    const mLbls=allM.map(k=>{const[y,mo]=k.split('-');return new Date(+y,+mo-1).toLocaleString('default',{month:'short',year:'2-digit'});});
+    const mTots=allM.map(k=>Math.round((state.expenses[k]||[]).reduce((s,e)=>s+expTotal(e),0)));
+    const splits=state.splits[m]||{};
+    const pTotals=state.people.map((p,i)=>({
+      name:p.name,
+      total:expenses.reduce((s,e)=>s+((splits[e.id]||{})[p.id]||0),0),
+      color:PCOLS[i%PCOLS.length]
+    })).filter(pt=>pt.total>0);
+
+    const wrap=document.createElement('div');
+    wrap.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;';
+    document.body.appendChild(wrap);
+    const noAnim={animation:false,responsive:false,maintainAspectRatio:false};
+
+    function snap(type,data,opts,w=640,h=300){
+      const cv=document.createElement('canvas');
+      cv.width=w;cv.height=h;wrap.appendChild(cv);
+      const ch=new Chart(cv,{type,data,options:{...opts,...noAnim}});
+      const img=cv.toDataURL('image/png');
+      ch.destroy();return img;
+    }
+
+    const pieImg=snap('doughnut',
+      {labels:cats,datasets:[{data:cats.map(c=>catTotals[c]),backgroundColor:colors,borderWidth:3,borderColor:'#0B0C0F'}]},
+      {cutout:'66%',plugins:{legend:{display:true,position:'right',labels:{color:'#9398A6',font:{size:11},boxWidth:10,padding:12}},tooltip:{enabled:false}}}
+    );
+    const barImg=snap('bar',
+      {labels:mLbls,datasets:[{data:mTots,backgroundColor:allM.map(k=>k===m?'#7B8BFF':'#22252E'),borderRadius:5,borderSkipped:false}]},
+      {plugins:{legend:{display:false}},scales:{
+        x:{grid:{display:false},border:{display:false},ticks:{color:'#62677A',font:{size:10}}},
+        y:{grid:{color:'#22252E'},border:{display:false},ticks:{callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'k':v),color:'#62677A',font:{size:10}}}
+      }}
+    );
+    let personImg=null;
+    if(pTotals.length>0){
+      personImg=snap('doughnut',
+        {labels:pTotals.map(pt=>pt.name),datasets:[{data:pTotals.map(pt=>pt.total),backgroundColor:pTotals.map(pt=>pt.color),borderWidth:3,borderColor:'#0B0C0F'}]},
+        {cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#9398A6',font:{size:11},boxWidth:10,padding:12}},tooltip:{enabled:false}}}
+      );
+    }
+    document.body.removeChild(wrap);
+
+    const pct=budget>0?Math.round(total/budget*100):0;
+    const fillColor=total>budget?'#F26B6B':pct<70?'#46D29A':pct<90?'#F2C166':'#F26B6B';
+    const catRows=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
+      .map(([cat,val])=>`<tr><td><span class="dot" style="background:${CATS[cat]||'#62677A'}"></span>${cat}</td><td class="num">₹${val.toLocaleString('en-IN')}</td><td class="num">${total>0?Math.round(val/total*100):0}%</td></tr>`).join('');
+    const expRows=[...expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''))
+      .map(e=>`<tr><td>${e.date||'—'}</td><td>${escHtml(e.name)}</td><td><span class="badge" style="background:${(CATS[e.cat]||'#62677A')}22;color:${CATS[e.cat]||'#62677A'}">${e.cat}</span></td><td class="num">₹${expTotal(e).toLocaleString('en-IN')}</td></tr>`).join('');
+
+    const html=`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Expense Report — ${monthLabel(m)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0B0C0F;color:#E6E8EE;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;padding:32px 24px;max-width:900px;margin:0 auto;}
+h1{font-size:22px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px;}
+.sub{color:#62677A;font-size:11px;margin-bottom:28px;}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.metric{background:#13151A;border:1px solid #22252E;border-radius:8px;padding:16px;}
+.metric-label{font-size:10px;color:#62677A;margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase;}
+.metric-value{font-size:22px;font-weight:700;letter-spacing:-.5px;}
+.metric-sub{font-size:10px;color:#62677A;margin-top:4px;}
+.budget-bar{height:5px;background:#22252E;border-radius:3px;overflow:hidden;margin-top:8px;}
+.budget-fill{height:100%;border-radius:3px;}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
+.chart-card{background:#13151A;border:1px solid #22252E;border-radius:8px;padding:16px;}
+.chart-card h3{font-size:10px;color:#62677A;margin-bottom:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;}
+.chart-card img{width:100%;border-radius:4px;display:block;}
+.section-title{font-size:10px;font-weight:600;letter-spacing:.08em;color:#62677A;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #22252E;}
+.tbl-wrap{background:#13151A;border:1px solid #22252E;border-radius:8px;overflow:hidden;margin-bottom:28px;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;color:#62677A;text-align:left;padding:8px 12px;border-bottom:1px solid #22252E;font-weight:500;letter-spacing:.06em;}
+td{padding:8px 12px;border-bottom:1px solid #1A1C21;font-size:12px;color:#C8CAD4;}
+tr:last-child td{border-bottom:none;}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:500;}
+.footer{margin-top:40px;font-size:10px;color:#3D4049;text-align:center;padding-bottom:16px;}
+@media print{body{background:#fff;color:#000;padding:16px;}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style></head><body>
+<h1>Expense Report</h1>
+<p class="sub">${monthLabel(m)} &nbsp;·&nbsp; generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</p>
+<div class="metrics">
+  <div class="metric"><div class="metric-label">total spent</div><div class="metric-value">₹${total.toLocaleString('en-IN')}</div><div class="metric-sub">${pct}% of ₹${budget.toLocaleString('en-IN')} budget</div><div class="budget-bar"><div class="budget-fill" style="width:${Math.min(100,pct)}%;background:${fillColor}"></div></div></div>
+  <div class="metric"><div class="metric-label">transactions</div><div class="metric-value">${expenses.length}</div><div class="metric-sub">this month</div></div>
+  <div class="metric"><div class="metric-label">daily average</div><div class="metric-value">₹${daily.toLocaleString('en-IN')}</div><div class="metric-sub">per day (${days} days)</div></div>
+</div>
+<div class="charts-row">
+  <div class="chart-card"><h3>category breakdown</h3><img src="${pieImg}" alt="Category Breakdown"></div>
+  <div class="chart-card"><h3>monthly trend (last 6 months)</h3><img src="${barImg}" alt="Monthly Trend"></div>
+</div>
+${personImg?`<div class="charts-row" style="grid-template-columns:1fr;"><div class="chart-card" style="max-width:480px;"><h3>per-person split</h3><img src="${personImg}" alt="Per-Person Split"></div></div>`:''}
+<div class="section-title">category summary</div>
+<div class="tbl-wrap"><table><thead><tr><th>Category</th><th class="num">Amount</th><th class="num">Share</th></tr></thead><tbody>${catRows}</tbody></table></div>
+<div class="section-title">expense detail — ${expenses.length} transactions</div>
+<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th></tr></thead><tbody>${expRows}</tbody></table></div>
+<p class="footer">expense tracker &nbsp;·&nbsp; ${new Date().toISOString()}</p>
+</body></html>`;
+
+    const blob=new Blob([html],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`expense-report-${m}.html`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    btn.textContent='exported!';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='export report';},2500);
+  }catch(err){
+    alert('Export failed: '+err.message);
+    btn.disabled=false;btn.textContent='export report';
   }
 }
 
