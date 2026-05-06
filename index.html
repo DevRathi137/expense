@@ -707,9 +707,22 @@ kbd{
   .metric{border-bottom:1px solid var(--border);}
 }
 
+@media(max-width:520px){
+  .bar-kbd-hint,.bar-spacer{display:none;}
+  .save-sheet-bar{flex-wrap:wrap;gap:8px;padding:10px 12px;}
+  .btn-report{flex:1;height:38px;font-size:11px;}
+  .btn-save-sheet{flex:0 0 100%;height:42px;font-size:12px;font-weight:700;letter-spacing:.02em;}
+}
+
 @supports(padding-bottom:env(safe-area-inset-bottom)){
   .content{padding-bottom:max(84px,calc(52px + env(safe-area-inset-bottom)));}
   .save-sheet-bar{padding-bottom:max(10px,calc(6px + env(safe-area-inset-bottom)));}
+}
+@media(max-width:520px){
+  @supports(padding-bottom:env(safe-area-inset-bottom)){
+    .content{padding-bottom:max(116px,calc(100px + env(safe-area-inset-bottom)));}
+    .save-sheet-bar{padding-bottom:max(12px,calc(8px + env(safe-area-inset-bottom)));}
+  }
 }
 </style>
 
@@ -947,7 +960,7 @@ kbd{
 
   <!-- BOTTOM BAR -->
   <div class="save-sheet-bar">
-    <kbd>R</kbd><span class="bar-hint">report</span>
+    <span class="bar-kbd-hint"><kbd>R</kbd><span class="bar-hint">report</span></span>
     <span class="bar-spacer"></span>
     <button class="btn-report" onclick="openReport()">monthly report</button>
     <button class="btn-report" id="exportReportBtn" onclick="exportReport()">export report</button>
