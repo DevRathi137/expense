@@ -10,8 +10,9 @@ async function sbGetSession() {
   return session;
 }
 async function sbGetUser() {
-  const { data: { user } } = await sbClient.auth.getUser();
-  return user;
+  // Use cached local session — avoids a network call on every save operation
+  const { data: { session } } = await sbClient.auth.getSession();
+  return session?.user ?? null;
 }
 async function sbSignIn(email, password) {
   const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
@@ -30,7 +31,8 @@ async function sbSignOut() {
 
 /* ── LOAD ALL STATE FROM SUPABASE ───────────────────────────── */
 async function sbLoadState() {
-  const user = await sbGetUser();
+  const { data: { session } } = await sbClient.auth.getSession();
+  const user = session?.user;
   if (!user) throw new Error('not authenticated');
   const uid = user.id;
 
