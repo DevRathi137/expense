@@ -724,7 +724,129 @@ kbd{
     .save-sheet-bar{padding-bottom:max(12px,calc(8px + env(safe-area-inset-bottom)));}
   }
 }
+
+/* ── AUTH MODAL ──────────────────────────────────────────── */
+.auth-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+}
+.auth-overlay.hidden{display:none;}
+.auth-card{
+  width:100%;max-width:340px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:28px 24px;
+  box-shadow:var(--sh-md);
+}
+.auth-logo{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--ff-mono);font-size:13px;font-weight:600;color:var(--ink-2);
+  margin-bottom:24px;
+}
+.auth-logo svg{flex-shrink:0;}
+.auth-tabs{
+  display:flex;gap:2px;
+  background:var(--surface-2);border-radius:var(--r-md);
+  padding:3px;margin-bottom:20px;
+}
+.auth-tab{
+  flex:1;padding:7px;border:none;border-radius:var(--r-sm);
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  cursor:pointer;transition:background .15s,color .15s;
+  background:transparent;color:var(--ink-3);
+}
+.auth-tab.active{background:var(--surface-3);color:var(--ink-1);}
+.auth-input{
+  width:100%;padding:9px 12px;margin-bottom:10px;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--r-md);color:var(--ink-1);
+  font-family:var(--ff-mono);font-size:12px;
+  outline:none;transition:border-color .15s;display:block;
+}
+.auth-input:focus{border-color:var(--brand);}
+.auth-input::placeholder{color:var(--ink-4);}
+.auth-submit{
+  width:100%;padding:10px;margin-top:4px;
+  background:var(--brand);border:none;border-radius:var(--r-md);
+  color:#fff;font-family:var(--ff-mono);font-size:12px;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}
+.auth-submit:hover{background:var(--brand-dk);}
+.auth-submit:disabled{opacity:.5;cursor:not-allowed;}
+.auth-error{
+  font-family:var(--ff-mono);font-size:11px;color:var(--red);
+  background:var(--red-lt);border-radius:var(--r-sm);
+  padding:8px 10px;margin-bottom:12px;
+}
+.auth-note{
+  font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);
+  text-align:center;margin-top:14px;
+}
+.auth-success{
+  font-family:var(--ff-mono);font-size:11px;color:var(--green);
+  background:var(--green-lt);border-radius:var(--r-sm);
+  padding:8px 10px;margin-bottom:12px;
+}
+.auth-note-link{
+  background:none;border:none;color:var(--brand);
+  font-family:var(--ff-mono);font-size:10px;cursor:pointer;
+  text-decoration:underline;padding:0;
+}
+.auth-user-badge{
+  font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);
+  padding:2px 8px;border:1px solid var(--border);border-radius:var(--r-sm);
+  max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 </style>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay" class="auth-overlay hidden">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="18" height="18" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="14" fill="#13151A"/>
+        <rect x="12" y="24" width="9" height="30" rx="3" fill="#7B8BFF"/>
+        <rect x="28" y="32" width="9" height="22" rx="3" fill="#7B8BFF" opacity=".82"/>
+        <rect x="44" y="40" width="9" height="14" rx="3" fill="#7B8BFF" opacity=".62"/>
+      </svg>
+      spendwise
+    </div>
+    <!-- sign in / sign up form -->
+    <div id="authForm">
+      <div class="auth-tabs">
+        <button id="authTabSignin" class="auth-tab active" onclick="switchAuthTab('signin')">sign in</button>
+        <button id="authTabSignup" class="auth-tab" onclick="switchAuthTab('signup')">sign up</button>
+      </div>
+      <div id="authError" class="auth-error" style="display:none"></div>
+      <input type="email" id="authEmail" class="auth-input" placeholder="email address" autocomplete="email"/>
+      <input type="password" id="authPassword" class="auth-input" placeholder="password (min 6 chars)" autocomplete="current-password"/>
+      <button id="authSubmitBtn" class="auth-submit" onclick="submitAuth()">sign in</button>
+      <p class="auth-note" id="authNote">
+        don't have an account?
+        <button class="auth-note-link" onclick="switchAuthTab('signup')">sign up</button>
+      </p>
+    </div>
+
+    <!-- shown after signup — waiting for email confirmation -->
+    <div id="authConfirm" style="display:none">
+      <div style="text-align:center;padding:8px 0 20px;">
+        <div style="font-size:32px;margin-bottom:12px;">&#9993;</div>
+        <div style="font-family:var(--ff-mono);font-size:13px;font-weight:600;color:var(--ink-1);margin-bottom:8px;">check your inbox</div>
+        <div style="font-family:var(--ff-mono);font-size:11px;color:var(--ink-3);line-height:1.6;" id="authConfirmMsg">
+          We sent a confirmation link to your email.<br>Click it to activate your account, then come back and sign in.
+        </div>
+      </div>
+      <button class="auth-submit" onclick="showAuthForm()" style="background:var(--surface-3);color:var(--ink-2);">back to sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase.js"></script>
 
 <div class="tracker">
 
@@ -748,6 +870,9 @@ kbd{
       <span class="topbar-divider"></span>
       <button class="ic-btn" onclick="switchTab('charts')" title="Charts">&#9636;</button>
       <button class="ic-btn" onclick="openReport()" title="Report">&#9654;</button>
+      <span class="topbar-divider"></span>
+      <span class="auth-user-badge" id="topbarUser" title="Signed in as"></span>
+      <button class="ic-btn" id="signOutBtn" onclick="handleSignOut()" title="Sign out" style="display:none">&#x2192;</button>
     </div>
   </div>
 
@@ -1068,8 +1193,7 @@ function monthLabel(m){
   return new Date(+y,+mo-1).toLocaleString('default',{month:'short',year:'numeric'});
 }
 
-function loadState(){
-  try{const s=localStorage.getItem('expTrackerV5');if(s)state=JSON.parse(s);}catch(e){}
+function _ensureStateDefaults(){
   if(!state.expenses)    state.expenses={};
   if(!state.wishlist)    state.wishlist=[];
   if(!state.people)      state.people=[];
@@ -1079,17 +1203,7 @@ function loadState(){
   Object.values(state.expenses).forEach(a=>a.forEach(e=>{if(!e.id)e.id=genId();}));
   state.wishlist.forEach(w=>{if(!w.id)w.id=genId();});
   state.people.forEach(p=>{if(!p.id)p.id=genId();});
-  if(!state.expenses[currentMonth]){
-    const td=todayStr();
-    state.expenses[currentMonth]=[
-      {id:genId(),name:'Rent',           cat:'Housing',    entries:[{id:genId(),date:td,amount:15000,note:'Monthly rent'}]},
-      {id:genId(),name:'Groceries',      cat:'Food',       entries:[{id:genId(),date:td,amount:2500,note:'Week 1'},{id:genId(),date:td,amount:2000,note:'Week 2'}]},
-      {id:genId(),name:'Auto rickshaw',  cat:'Transport',  entries:[{id:genId(),date:td,amount:600,note:''},{id:genId(),date:td,amount:600,note:''}]},
-      {id:genId(),name:'Electricity',    cat:'Utilities',  entries:[{id:genId(),date:td,amount:800,note:''}]},
-      {id:genId(),name:'Dinner out',     cat:'Food',       entries:[{id:genId(),date:td,amount:2000,note:'Restaurant'}]},
-      {id:genId(),name:'Mobile recharge',cat:'Utilities',  entries:[{id:genId(),date:td,amount:599,note:''}]}
-    ];
-  }
+  // migrate old flat amount → entries
   Object.values(state.expenses).forEach(arr=>arr.forEach(exp=>{
     if(typeof exp.amount!=='undefined'&&!exp.entries){
       exp.entries=exp.amount>0?[{id:genId(),date:todayStr(),amount:exp.amount,note:''}]:[];
@@ -1097,7 +1211,28 @@ function loadState(){
     } else if(!exp.entries) exp.entries=[];
   }));
 }
-function saveState(){try{localStorage.setItem('expTrackerV5',JSON.stringify(state));}catch(e){}}
+
+function _seedDemoData(){
+  if(state.expenses[currentMonth]) return;
+  const td=todayStr();
+  state.expenses[currentMonth]=[
+    {id:genId(),name:'Rent',           cat:'Housing',    entries:[{id:genId(),date:td,amount:15000,note:'Monthly rent'}]},
+    {id:genId(),name:'Groceries',      cat:'Food',       entries:[{id:genId(),date:td,amount:2500,note:'Week 1'},{id:genId(),date:td,amount:2000,note:'Week 2'}]},
+    {id:genId(),name:'Auto rickshaw',  cat:'Transport',  entries:[{id:genId(),date:td,amount:600,note:''},{id:genId(),date:td,amount:600,note:''}]},
+    {id:genId(),name:'Electricity',    cat:'Utilities',  entries:[{id:genId(),date:td,amount:800,note:''}]},
+    {id:genId(),name:'Dinner out',     cat:'Food',       entries:[{id:genId(),date:td,amount:2000,note:'Restaurant'}]},
+    {id:genId(),name:'Mobile recharge',cat:'Utilities',  entries:[{id:genId(),date:td,amount:599,note:''}]}
+  ];
+}
+
+function loadState(){
+  try{const s=localStorage.getItem('expTrackerV5');if(s)state=JSON.parse(s);}catch(e){}
+  _ensureStateDefaults();
+  _seedDemoData();
+}
+function saveState(){
+  try{localStorage.setItem('expTrackerV5',JSON.stringify(state));}catch(e){}
+}
 
 /* ── EXPENSE ITEM HELPERS ───────────────────────────── */
 let expandedExp=new Set();
@@ -1215,11 +1350,14 @@ function addExpense(){
   const m=getMonth();
   if(!state.expenses[m])state.expenses[m]=[];
   const id=genId();
-  state.expenses[m].push({id,name,cat,entries:[{id:genId(),date:todayStr(),amount:amt,note:'',paidBy}]});
+  const expense={id,name,cat,entries:[{id:genId(),date:todayStr(),amount:amt,note:'',paidBy}]};
+  state.expenses[m].push(expense);
   document.getElementById('newName').value='';
   document.getElementById('newAmt').value='';
   expandedExp.add(id);
-  saveState();render();
+  saveState();
+  sbSaveExpense(m,expense).catch(console.error);
+  render();
 }
 function deleteExpense(id){
   const m=getMonth();
@@ -1231,7 +1369,9 @@ function deleteExpense(id){
   state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.id!==id);
   if(state.splits[m])delete state.splits[m][id];
   expandedExp.delete(id);
-  saveState();render();
+  saveState();
+  sbDeleteExpense(id).catch(console.error);
+  render();
 }
 function addEntry(expId){
   const m=getMonth();
@@ -1242,19 +1382,24 @@ function addEntry(expId){
   const note=(document.getElementById('en-'+expId)?.value||'').trim();
   const paidBy=document.getElementById('ep-'+expId)?.value||'';
   if(isNaN(amt)||amt<=0)return;
-  exp.entries.push({id:genId(),date,amount:amt,note,paidBy});
+  const entry={id:genId(),date,amount:amt,note,paidBy};
+  exp.entries.push(entry);
   const eaEl=document.getElementById('ea-'+expId);
   const enEl=document.getElementById('en-'+expId);
   if(eaEl)eaEl.value='';
   if(enEl)enEl.value='';
-  saveState();render();
+  saveState();
+  sbSaveEntry(expId,entry).catch(console.error);
+  render();
 }
 function deleteEntry(expId,entryId){
   const m=getMonth();
   const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
   if(!exp)return;
   exp.entries=exp.entries.filter(en=>en.id!==entryId);
-  saveState();render();
+  saveState();
+  sbDeleteEntry(entryId).catch(console.error);
+  render();
 }
 
 function startEditExp(expId){editingExp.add(expId);expandedExp.add(expId);renderExpCard(state.expenses[getMonth()]||[]);}
@@ -1268,7 +1413,9 @@ function saveEditExp(expId){
   if(name)exp.name=name;
   if(cat)exp.cat=cat;
   editingExp.delete(expId);
-  saveState();render();
+  saveState();
+  sbSaveExpense(m,exp).catch(console.error);
+  render();
 }
 
 function startEditEntry(entryId){editingEntry.add(entryId);renderExpCard(state.expenses[getMonth()]||[]);}
@@ -1288,7 +1435,9 @@ function saveEditEntry(expId,entryId){
   en.note=note;
   en.paidBy=paidBy;
   editingEntry.delete(entryId);
-  saveState();render();
+  saveState();
+  sbSaveEntry(expId,en).catch(console.error);
+  render();
 }
 
 /* ── WISHLIST ───────────────────────────────────────── */
@@ -1301,7 +1450,9 @@ function addWish(){
   state.wishlist.push({id:genId(),name,cost,cat,type,done:false});
   document.getElementById('wishName').value='';
   document.getElementById('wishCost').value='';
-  saveState();render();
+  saveState();
+  sbSaveWishlist(state.wishlist).catch(console.error);
+  render();
 }
 function toggleWish(id){
   const w=state.wishlist.find(w=>w.id===id);
@@ -1311,17 +1462,31 @@ function toggleWish(id){
   if(w.done&&w.cost>0){
     if(!state.expenses[m])state.expenses[m]=[];
     const already=state.expenses[m].find(e=>e.fromWish===id);
-    if(!already){const wid=genId();state.expenses[m].push({id:wid,name:w.name,cat:w.cat||'Shopping',fromWish:id,entries:[{id:genId(),date:todayStr(),amount:w.cost,note:'From wish list'}]});expandedExp.add(wid);}
+    if(!already){
+      const wid=genId();
+      const exp={id:wid,name:w.name,cat:w.cat||'Shopping',fromWish:id,entries:[{id:genId(),date:todayStr(),amount:w.cost,note:'From wish list'}]};
+      state.expenses[m].push(exp);
+      expandedExp.add(wid);
+      sbSaveExpense(m,exp).catch(console.error);
+    }
   }else if(!w.done){
+    const removed=(state.expenses[m]||[]).filter(e=>e.fromWish===id);
     state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.fromWish!==id);
+    removed.forEach(e=>sbDeleteExpense(e.id).catch(console.error));
   }
-  saveState();render();
+  saveState();
+  sbSaveWishlist(state.wishlist).catch(console.error);
+  render();
 }
 function deleteWish(id){
   const m=getMonth();
+  const removed=(state.expenses[m]||[]).filter(e=>e.fromWish===id);
   state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.fromWish!==id);
   state.wishlist=state.wishlist.filter(w=>w.id!==id);
-  saveState();render();
+  removed.forEach(e=>sbDeleteExpense(e.id).catch(console.error));
+  saveState();
+  sbSaveWishlist(state.wishlist).catch(console.error);
+  render();
 }
 function startEditWish(id){editingWish.add(id);render();}
 function cancelEditWish(id){editingWish.delete(id);render();}
@@ -1333,28 +1498,33 @@ function saveEditWish(id){
   const cat=document.getElementById('wcat-'+id)?.value||w.cat;
   const type=document.getElementById('wtype-'+id)?.value||w.type;
   if(name)w.name=name;
-  w.cost=cost;
-  w.cat=cat;
-  w.type=type;
+  w.cost=cost;w.cat=cat;w.type=type;
   const m=getMonth();
   const linked=state.expenses[m]&&state.expenses[m].find(e=>e.fromWish===id);
-  if(linked){linked.name=w.name;linked.cat=w.cat;}
+  if(linked){linked.name=w.name;linked.cat=w.cat;sbSaveExpense(m,linked).catch(console.error);}
   editingWish.delete(id);
-  saveState();render();
+  saveState();
+  sbSaveWishlist(state.wishlist).catch(console.error);
+  render();
 }
 
 /* ── PEOPLE ─────────────────────────────────────────── */
 function addPerson(){
   const name=document.getElementById('personName').value.trim();
   if(!name)return;
-  state.people.push({id:genId(),name});
+  const p={id:genId(),name};
+  state.people.push(p);
   document.getElementById('personName').value='';
-  saveState();renderSplit();populatePaidBySelects();
+  saveState();
+  sbSavePeople([p]).catch(console.error);
+  renderSplit();populatePaidBySelects();
 }
 function removePerson(id){
   state.people=state.people.filter(p=>p.id!==id);
   Object.values(state.splits).forEach(ms=>Object.values(ms).forEach(sp=>delete sp[id]));
-  saveState();renderSplit();populatePaidBySelects();
+  saveState();
+  sbDeletePerson(id).catch(console.error);
+  renderSplit();populatePaidBySelects();
 }
 function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 
@@ -1367,6 +1537,7 @@ function updateSplit(expId,personId,rawValue){
   if(!isNaN(val)&&val>=0)state.splits[m][expId][personId]=val;
   else delete state.splits[m][expId][personId];
   saveState();
+  sbSaveSplits(m,state.splits[m]||{}).catch(console.error);
   const e=(state.expenses[m]||[]).find(ex=>ex.id===expId);
   if(e){
     const expSp=state.splits[m][expId]||{};
@@ -1386,7 +1557,9 @@ function quickSplit(expId){
   if(!state.splits[m][expId])state.splits[m][expId]={};
   const share=Math.round(expTotal(e)/state.people.length*100)/100;
   state.people.forEach(p=>{state.splits[m][expId][p.id]=share;});
-  saveState();renderSplit();
+  saveState();
+  sbSaveSplits(m,state.splits[m]||{}).catch(console.error);
+  renderSplit();
 }
 function splitAllEqual(){
   if(state.people.length===0){alert('Add people first.');return;}
@@ -1397,7 +1570,9 @@ function splitAllEqual(){
     const share=Math.round(expTotal(e)/state.people.length*100)/100;
     state.people.forEach(p=>{state.splits[m][e.id][p.id]=share;});
   });
-  saveState();renderSplit();
+  saveState();
+  sbSaveSplits(m,state.splits[m]||{}).catch(console.error);
+  renderSplit();
 }
 
 function updatePsnSummary(){
@@ -1480,6 +1655,7 @@ function updateSettledAmt(key,raw){
   if(!isNaN(val)&&val>=0)state.settlements[m][key]=val;
   else delete state.settlements[m][key];
   saveState();
+  sbSaveSettlements(m,state.settlements[m]||{}).catch(console.error);
   const txns=calcSettlement();
   txns.forEach(t=>{
     const k=t.from.id+'_'+t.to.id;
@@ -2220,10 +2396,141 @@ function editBudget(){
 function saveBudget(val){
   const v=parseInt(val,10);
   if(!isNaN(v)&&v>0)state.budget=v;
-  saveState();render();
+  saveState();
+  sbSaveSettings(state.budget).catch(console.error);
+  render();
+}
+
+/* ── AUTH UI ────────────────────────────────────────── */
+let _authMode = 'signin';
+
+function showAuthModal() {
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+function hideAuthModal() {
+  document.getElementById('authOverlay').classList.add('hidden');
+}
+function showAuthForm() {
+  document.getElementById('authForm').style.display = '';
+  document.getElementById('authConfirm').style.display = 'none';
+  switchAuthTab('signin');
+}
+function switchAuthTab(mode) {
+  _authMode = mode;
+  const isSignin = mode === 'signin';
+  document.getElementById('authTabSignin').classList.toggle('active', isSignin);
+  document.getElementById('authTabSignup').classList.toggle('active', !isSignin);
+  document.getElementById('authSubmitBtn').textContent = isSignin ? 'sign in' : 'create account';
+  document.getElementById('authNote').innerHTML = isSignin
+    ? `don't have an account? <button class="auth-note-link" onclick="switchAuthTab('signup')">sign up</button>`
+    : `already have an account? <button class="auth-note-link" onclick="switchAuthTab('signin')">sign in</button>`;
+  document.getElementById('authError').style.display = 'none';
+}
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  const btn = document.getElementById('authSubmitBtn');
+  if (!email || !password) { errEl.textContent = 'Enter email and password.'; errEl.style.display = ''; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = ''; return; }
+  btn.disabled = true;
+  btn.textContent = _authMode === 'signin' ? 'signing in…' : 'creating account…';
+  errEl.style.display = 'none';
+  try {
+    if (_authMode === 'signin') {
+      await sbSignIn(email, password);
+      // onAuthStateChange handles the rest
+    } else {
+      const { data } = await sbSignUp(email, password);
+      // Supabase returns session=null when confirmation email is required
+      if (!data.session) {
+        // show confirmation screen
+        document.getElementById('authForm').style.display = 'none';
+        document.getElementById('authConfirmMsg').innerHTML =
+          `We sent a confirmation link to <strong style="color:var(--ink-1)">${email}</strong>.<br>
+           Click it to activate your account, then come back and sign in.`;
+        document.getElementById('authConfirm').style.display = '';
+      }
+      // if session exists (email confirm disabled) onAuthStateChange fires automatically
+    }
+  } catch(err) {
+    errEl.textContent = err.message;
+    errEl.style.display = '';
+    btn.disabled = false;
+    btn.textContent = _authMode === 'signin' ? 'sign in' : 'create account';
+  }
+}
+async function handleSignOut() {
+  await sbSignOut();
+  state = {expenses:{},wishlist:[],people:[],splits:{},settlements:{},budget:30000};
+  document.getElementById('topbarUser').textContent = '';
+  document.getElementById('signOutBtn').style.display = 'none';
+  showAuthModal();
+}
+function setUserBadge(email) {
+  const el = document.getElementById('topbarUser');
+  el.textContent = email.split('@')[0];
+  el.title = 'Signed in as ' + email;
+  document.getElementById('signOutBtn').style.display = '';
 }
 
 /* ── INIT ───────────────────────────────────────────── */
-loadState();
-render();
+(async function init() {
+  // Listen for auth changes (handles login callback)
+  sbClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      hideAuthModal();
+      setUserBadge(session.user.email);
+      await loadFromSupabase(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      showAuthModal();
+    }
+  });
+
+  const session = await sbGetSession();
+  if (!session) {
+    // No session — load localStorage for offline use, show auth
+    loadState();
+    render();
+    showAuthModal();
+    return;
+  }
+
+  setUserBadge(session.user.email);
+  await loadFromSupabase(session.user);
+})();
+
+async function loadFromSupabase(user) {
+  try {
+    const sbState = await sbLoadState();
+    // One-time migration: if Supabase is empty but localStorage has data
+    const hasSupabaseData = Object.keys(sbState.expenses).length > 0 || sbState.wishlist.length > 0;
+    if (!hasSupabaseData && !localStorage.getItem('sb_migrated')) {
+      const local = localStorage.getItem('expTrackerV5');
+      if (local) {
+        const localState = JSON.parse(local);
+        const hasLocalData = Object.keys(localState.expenses || {}).some(k => (localState.expenses[k]||[]).length > 0);
+        if (hasLocalData) {
+          await sbMigrateFromLocalStorage(localState);
+          const migrated = await sbLoadState();
+          state = migrated;
+        } else {
+          state = sbState;
+          localStorage.setItem('sb_migrated', '1');
+        }
+      } else {
+        state = sbState;
+        localStorage.setItem('sb_migrated', '1');
+      }
+    } else {
+      state = sbState;
+    }
+    _ensureStateDefaults();
+    render();
+  } catch(err) {
+    console.error('Supabase load failed, falling back to localStorage:', err);
+    loadState();
+    render();
+  }
+}
 </script>
