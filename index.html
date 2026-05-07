@@ -2476,7 +2476,6 @@ function setUserBadge(email) {
 
 /* ── INIT ───────────────────────────────────────────── */
 (async function init() {
-  // Listen for auth changes (handles login callback)
   sbClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       hideAuthModal();
@@ -2484,15 +2483,34 @@ function setUserBadge(email) {
       await loadFromSupabase(session.user);
     } else if (event === 'SIGNED_OUT') {
       showAuthModal();
+    } else if (event === 'TOKEN_REFRESHED') {
+      // silent — session stays alive
+    } else if (event === 'USER_UPDATED') {
+      // silent
     }
   });
 
+  // Check if returning from a confirmation email link
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+  const errorCode = hashParams.get('error_code');
+  const errorDesc = hashParams.get('error_description');
+
+  if (errorCode) {
+    // Confirmation link expired or already used
+    loadState(); render(); showAuthModal();
+    const errEl = document.getElementById('authError');
+    errEl.textContent = errorCode === 'otp_expired'
+      ? 'Confirmation link expired. Please sign up again.'
+      : (errorDesc || 'Link is invalid. Please sign up again.');
+    errEl.style.display = '';
+    // clean the URL
+    history.replaceState(null, '', window.location.pathname);
+    return;
+  }
+
   const session = await sbGetSession();
   if (!session) {
-    // No session — load localStorage for offline use, show auth
-    loadState();
-    render();
-    showAuthModal();
+    loadState(); render(); showAuthModal();
     return;
   }
 
