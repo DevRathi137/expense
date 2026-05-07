@@ -94,6 +94,27 @@ input,select,button{font-family:var(--ff);}
 .ic-btn:hover{background:var(--surface-2);color:var(--ink-1);}
 .topbar-divider{width:1px;height:16px;background:var(--border);margin:0 4px;flex-shrink:0;}
 
+/* ── SYNC INDICATOR ─────────────────────────────────────── */
+#syncDot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--green);opacity:.7;
+  transition:background .3s,opacity .3s;
+  flex-shrink:0;
+}
+#syncDot.syncing{background:var(--amber);opacity:1;animation:pulse .8s infinite alternate;}
+#syncDot.error{background:var(--red);opacity:1;}
+@keyframes pulse{from{opacity:.5}to{opacity:1}}
+#syncToast{
+  position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+  background:#1e0a0a;border:1px solid var(--red);color:var(--red);
+  font-size:11px;font-family:var(--ff-mono);padding:8px 14px;
+  border-radius:var(--r-md);max-width:480px;width:calc(100% - 32px);
+  box-shadow:var(--sh-md);z-index:9999;
+  display:none;cursor:pointer;
+  white-space:pre-wrap;word-break:break-all;
+}
+#syncToast:hover{opacity:.85;}
+
 /* ── SUMMARY ─────────────────────────────────────────── */
 .summary{padding:20px 16px 16px;border-bottom:1px solid var(--border);}
 .summary-label{
@@ -871,6 +892,7 @@ kbd{
       <button class="ic-btn" onclick="switchTab('charts')" title="Charts">&#9636;</button>
       <button class="ic-btn" onclick="openReport()" title="Report">&#9654;</button>
       <span class="topbar-divider"></span>
+      <span id="syncDot" title="Supabase sync status"></span>
       <span class="auth-user-badge" id="topbarUser" title="Signed in as"></span>
       <button class="ic-btn" id="signOutBtn" onclick="handleSignOut()" title="Sign out" style="display:none">&#x2192;</button>
     </div>
@@ -1356,7 +1378,7 @@ function addExpense(){
   document.getElementById('newAmt').value='';
   expandedExp.add(id);
   saveState();
-  sbSaveExpense(m,expense).catch(console.error);
+  sbSaveExpense(m,expense).catch(showSyncError);
   render();
 }
 function deleteExpense(id){
@@ -1370,7 +1392,7 @@ function deleteExpense(id){
   if(state.splits[m])delete state.splits[m][id];
   expandedExp.delete(id);
   saveState();
-  sbDeleteExpense(id).catch(console.error);
+  sbDeleteExpense(id).catch(showSyncError);
   render();
 }
 function addEntry(expId){
@@ -1389,7 +1411,7 @@ function addEntry(expId){
   if(eaEl)eaEl.value='';
   if(enEl)enEl.value='';
   saveState();
-  sbSaveEntry(expId,entry).catch(console.error);
+  sbSaveEntry(expId,entry).catch(showSyncError);
   render();
 }
 function deleteEntry(expId,entryId){
@@ -1398,7 +1420,7 @@ function deleteEntry(expId,entryId){
   if(!exp)return;
   exp.entries=exp.entries.filter(en=>en.id!==entryId);
   saveState();
-  sbDeleteEntry(entryId).catch(console.error);
+  sbDeleteEntry(entryId).catch(showSyncError);
   render();
 }
 
@@ -1414,7 +1436,7 @@ function saveEditExp(expId){
   if(cat)exp.cat=cat;
   editingExp.delete(expId);
   saveState();
-  sbSaveExpense(m,exp).catch(console.error);
+  sbSaveExpense(m,exp).catch(showSyncError);
   render();
 }
 
@@ -1436,7 +1458,7 @@ function saveEditEntry(expId,entryId){
   en.paidBy=paidBy;
   editingEntry.delete(entryId);
   saveState();
-  sbSaveEntry(expId,en).catch(console.error);
+  sbSaveEntry(expId,en).catch(showSyncError);
   render();
 }
 
@@ -1451,7 +1473,7 @@ function addWish(){
   document.getElementById('wishName').value='';
   document.getElementById('wishCost').value='';
   saveState();
-  sbSaveWishlist(state.wishlist).catch(console.error);
+  sbSaveWishlist(state.wishlist).catch(showSyncError);
   render();
 }
 function toggleWish(id){
@@ -1467,15 +1489,15 @@ function toggleWish(id){
       const exp={id:wid,name:w.name,cat:w.cat||'Shopping',fromWish:id,entries:[{id:genId(),date:todayStr(),amount:w.cost,note:'From wish list'}]};
       state.expenses[m].push(exp);
       expandedExp.add(wid);
-      sbSaveExpense(m,exp).catch(console.error);
+      sbSaveExpense(m,exp).catch(showSyncError);
     }
   }else if(!w.done){
     const removed=(state.expenses[m]||[]).filter(e=>e.fromWish===id);
     state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.fromWish!==id);
-    removed.forEach(e=>sbDeleteExpense(e.id).catch(console.error));
+    removed.forEach(e=>sbDeleteExpense(e.id).catch(showSyncError));
   }
   saveState();
-  sbSaveWishlist(state.wishlist).catch(console.error);
+  sbSaveWishlist(state.wishlist).catch(showSyncError);
   render();
 }
 function deleteWish(id){
@@ -1483,9 +1505,9 @@ function deleteWish(id){
   const removed=(state.expenses[m]||[]).filter(e=>e.fromWish===id);
   state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.fromWish!==id);
   state.wishlist=state.wishlist.filter(w=>w.id!==id);
-  removed.forEach(e=>sbDeleteExpense(e.id).catch(console.error));
+  removed.forEach(e=>sbDeleteExpense(e.id).catch(showSyncError));
   saveState();
-  sbSaveWishlist(state.wishlist).catch(console.error);
+  sbSaveWishlist(state.wishlist).catch(showSyncError);
   render();
 }
 function startEditWish(id){editingWish.add(id);render();}
@@ -1501,10 +1523,10 @@ function saveEditWish(id){
   w.cost=cost;w.cat=cat;w.type=type;
   const m=getMonth();
   const linked=state.expenses[m]&&state.expenses[m].find(e=>e.fromWish===id);
-  if(linked){linked.name=w.name;linked.cat=w.cat;sbSaveExpense(m,linked).catch(console.error);}
+  if(linked){linked.name=w.name;linked.cat=w.cat;sbSaveExpense(m,linked).catch(showSyncError);}
   editingWish.delete(id);
   saveState();
-  sbSaveWishlist(state.wishlist).catch(console.error);
+  sbSaveWishlist(state.wishlist).catch(showSyncError);
   render();
 }
 
@@ -1516,14 +1538,14 @@ function addPerson(){
   state.people.push(p);
   document.getElementById('personName').value='';
   saveState();
-  sbSavePeople([p]).catch(console.error);
+  sbSavePeople([p]).catch(showSyncError);
   renderSplit();populatePaidBySelects();
 }
 function removePerson(id){
   state.people=state.people.filter(p=>p.id!==id);
   Object.values(state.splits).forEach(ms=>Object.values(ms).forEach(sp=>delete sp[id]));
   saveState();
-  sbDeletePerson(id).catch(console.error);
+  sbDeletePerson(id).catch(showSyncError);
   renderSplit();populatePaidBySelects();
 }
 function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
@@ -1537,7 +1559,7 @@ function updateSplit(expId,personId,rawValue){
   if(!isNaN(val)&&val>=0)state.splits[m][expId][personId]=val;
   else delete state.splits[m][expId][personId];
   saveState();
-  sbSaveSplits(m,state.splits[m]||{}).catch(console.error);
+  sbSaveSplits(m,state.splits[m]||{}).catch(showSyncError);
   const e=(state.expenses[m]||[]).find(ex=>ex.id===expId);
   if(e){
     const expSp=state.splits[m][expId]||{};
@@ -1558,7 +1580,7 @@ function quickSplit(expId){
   const share=Math.round(expTotal(e)/state.people.length*100)/100;
   state.people.forEach(p=>{state.splits[m][expId][p.id]=share;});
   saveState();
-  sbSaveSplits(m,state.splits[m]||{}).catch(console.error);
+  sbSaveSplits(m,state.splits[m]||{}).catch(showSyncError);
   renderSplit();
 }
 function splitAllEqual(){
@@ -1571,7 +1593,7 @@ function splitAllEqual(){
     state.people.forEach(p=>{state.splits[m][e.id][p.id]=share;});
   });
   saveState();
-  sbSaveSplits(m,state.splits[m]||{}).catch(console.error);
+  sbSaveSplits(m,state.splits[m]||{}).catch(showSyncError);
   renderSplit();
 }
 
@@ -1655,7 +1677,7 @@ function updateSettledAmt(key,raw){
   if(!isNaN(val)&&val>=0)state.settlements[m][key]=val;
   else delete state.settlements[m][key];
   saveState();
-  sbSaveSettlements(m,state.settlements[m]||{}).catch(console.error);
+  sbSaveSettlements(m,state.settlements[m]||{}).catch(showSyncError);
   const txns=calcSettlement();
   txns.forEach(t=>{
     const k=t.from.id+'_'+t.to.id;
@@ -2397,7 +2419,7 @@ function saveBudget(val){
   const v=parseInt(val,10);
   if(!isNaN(v)&&v>0)state.budget=v;
   saveState();
-  sbSaveSettings(state.budget).catch(console.error);
+  sbSaveSettings(state.budget).catch(showSyncError);
   render();
 }
 
@@ -2547,8 +2569,50 @@ async function loadFromSupabase(user) {
     render();
   } catch(err) {
     console.error('Supabase load failed, falling back to localStorage:', err);
+    showSyncError(err);
     loadState();
     render();
   }
 }
+
+/* ── SYNC ERROR REPORTING ───────────────────────────────── */
+let _syncErrTimer = null;
+function showSyncError(err) {
+  console.error('[Supabase sync]', err);
+  const dot = document.getElementById('syncDot');
+  const toast = document.getElementById('syncToast');
+  if (dot) { dot.className = 'error'; dot.title = 'Sync error — click toast for details'; }
+  if (toast) {
+    toast.textContent = '⚠ Supabase sync failed: ' + (err?.message || String(err));
+    toast.style.display = 'block';
+    clearTimeout(_syncErrTimer);
+    _syncErrTimer = setTimeout(() => { toast.style.display = 'none'; }, 12000);
+  }
+}
+function markSyncing() {
+  const dot = document.getElementById('syncDot');
+  if (dot) dot.className = 'syncing';
+}
+function markSynced() {
+  const dot = document.getElementById('syncDot');
+  if (dot) { dot.className = ''; dot.title = 'Synced'; }
+}
+
+// Diagnostic helper — run window._testSupabase() in the browser console
+window._testSupabase = async function() {
+  try {
+    const session = await sbGetSession();
+    if (!session) { console.warn('[diag] No session — not signed in'); return; }
+    console.log('[diag] User:', session.user.email, session.user.id);
+    const { data, error } = await sbClient.from('expenses').select('id,name,month').limit(5);
+    if (error) { console.error('[diag] Read failed:', error); return; }
+    console.log('[diag] expenses rows:', data);
+    const testRow = { id: 'diag-test-' + Date.now(), user_id: session.user.id, name: '__diag__', category: 'Other', month: '2099-01' };
+    const { error: writeErr } = await sbClient.from('expenses').insert(testRow);
+    if (writeErr) { console.error('[diag] Write failed:', writeErr); return; }
+    await sbClient.from('expenses').delete().eq('id', testRow.id);
+    console.log('[diag] Read + Write + Delete all OK');
+  } catch(e) { console.error('[diag] Exception:', e); }
+};
 </script>
+<div id="syncToast" onclick="this.style.display='none'"></div>
