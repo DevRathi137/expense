@@ -10,7 +10,6 @@ async function sbGetSession() {
   return session;
 }
 async function sbGetUser() {
-  // Use cached local session — avoids a network call on every save operation
   const { data: { session } } = await sbClient.auth.getSession();
   return session?.user ?? null;
 }
@@ -110,14 +109,14 @@ async function sbLoadState() {
 /* ── EXPENSE CRUD ───────────────────────────────────────────── */
 async function sbSaveExpense(month, expense) {
   const user = await sbGetUser();
-  if (!user) return;
+  if (!user) throw new Error('sbSaveExpense: not authenticated');
   const uid = user.id;
 
   const { error: expErr } = await sbClient.from('expenses').upsert({
     id: expense.id, user_id: uid,
-    name: expense.name, category: expense.cat,
+    name: expense.name, category: expense.cat || 'Other',
     month, from_wish: expense.fromWish || null
-  });
+  }, { onConflict: 'id' });
   if (expErr) throw expErr;
 
   if (expense.entries?.length) {
@@ -126,26 +125,26 @@ async function sbSaveExpense(month, expense) {
         id: en.id, expense_id: expense.id, user_id: uid,
         date: en.date, amount: en.amount,
         note: en.note || '', paid_by: en.paidBy || null
-      }))
+      })),
+      { onConflict: 'id' }
     );
     if (enErr) throw enErr;
   }
 }
 
 async function sbDeleteExpense(expenseId) {
-  // entries cascade-delete via FK
   const { error } = await sbClient.from('expenses').delete().eq('id', expenseId);
   if (error) throw error;
 }
 
 async function sbSaveEntry(expenseId, entry) {
   const user = await sbGetUser();
-  if (!user) return;
+  if (!user) throw new Error('sbSaveEntry: not authenticated');
   const { error } = await sbClient.from('expense_entries').upsert({
     id: entry.id, expense_id: expenseId, user_id: user.id,
     date: entry.date, amount: entry.amount,
     note: entry.note || '', paid_by: entry.paidBy || null
-  });
+  }, { onConflict: 'id' });
   if (error) throw error;
 }
 
@@ -157,9 +156,11 @@ async function sbDeleteEntry(entryId) {
 /* ── PEOPLE CRUD ────────────────────────────────────────────── */
 async function sbSavePeople(people) {
   const user = await sbGetUser();
-  if (!user || !people.length) return;
+  if (!user) throw new Error('sbSavePeople: not authenticated');
+  if (!people.length) return;
   const { error } = await sbClient.from('people').upsert(
-    people.map(p => ({ id: p.id, user_id: user.id, name: p.name }))
+    people.map(p => ({ id: p.id, user_id: user.id, name: p.name })),
+    { onConflict: 'id' }
   );
   if (error) throw error;
 }
@@ -172,7 +173,7 @@ async function sbDeletePerson(personId) {
 /* ── SPLITS ─────────────────────────────────────────────────── */
 async function sbSaveSplits(month, monthSplits) {
   const user = await sbGetUser();
-  if (!user) return;
+  if (!user) throw new Error('sbSaveSplits: not authenticated');
   const uid = user.id;
 
   await sbClient.from('splits').delete().eq('user_id', uid).eq('month', month);
@@ -192,7 +193,7 @@ async function sbSaveSplits(month, monthSplits) {
 /* ── WISHLIST ───────────────────────────────────────────────── */
 async function sbSaveWishlist(wishlist) {
   const user = await sbGetUser();
-  if (!user) return;
+  if (!user) throw new Error('sbSaveWishlist: not authenticated');
   const uid = user.id;
 
   const { data: existing } = await sbClient.from('wishlist').select('id').eq('user_id', uid);
@@ -205,7 +206,8 @@ async function sbSaveWishlist(wishlist) {
         id: w.id, user_id: uid, name: w.name,
         cost: w.cost || 0, category: w.cat || 'Other',
         type: w.type || 'want', done: w.done || false
-      }))
+      })),
+      { onConflict: 'id' }
     );
     if (error) throw error;
   }
@@ -214,16 +216,22 @@ async function sbSaveWishlist(wishlist) {
 /* ── SETTINGS ───────────────────────────────────────────────── */
 async function sbSaveSettings(budget) {
   const user = await sbGetUser();
-  if (!user) return;
-  const { error } = await sbClient.from('user_settings').upsert({ user_id: user.id, budget });
+  if (!user) throw new Error('sbSaveSettings: not authenticated');
+  const { error } = await sbClient.from('user_settings').upsert(
+    { user_id: user.id, budget },
+    { onConflict: 'user_id' }
+  );
   if (error) throw error;
 }
 
 /* ── SETTLEMENTS ────────────────────────────────────────────── */
 async function sbSaveSettlements(month, data) {
   const user = await sbGetUser();
-  if (!user) return;
-  const { error } = await sbClient.from('settlements').upsert({ user_id: user.id, month, data });
+  if (!user) throw new Error('sbSaveSettlements: not authenticated');
+  const { error } = await sbClient.from('settlements').upsert(
+    { user_id: user.id, month, data },
+    { onConflict: 'user_id,month' }
+  );
   if (error) throw error;
 }
 

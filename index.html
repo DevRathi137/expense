@@ -2617,15 +2617,46 @@ window._testSupabase = async function() {
     const session = await sbGetSession();
     if (!session) { console.warn('[diag] No session — not signed in'); return; }
     console.log('[diag] User:', session.user.email, session.user.id);
+
     const { data, error } = await sbClient.from('expenses').select('id,name,month').limit(5);
     if (error) { console.error('[diag] Read failed:', error); return; }
     console.log('[diag] expenses rows:', data);
-    const testRow = { id: 'diag-test-' + Date.now(), user_id: session.user.id, name: '__diag__', category: 'Other', month: '2099-01' };
+
+    // Test direct insert
+    const testId = 'diag-test-' + Date.now();
+    const testRow = { id: testId, user_id: session.user.id, name: '__diag__', category: 'Other', month: '2099-01' };
     const { error: writeErr } = await sbClient.from('expenses').insert(testRow);
-    if (writeErr) { console.error('[diag] Write failed:', writeErr); return; }
-    await sbClient.from('expenses').delete().eq('id', testRow.id);
-    console.log('[diag] Read + Write + Delete all OK');
+    if (writeErr) { console.error('[diag] Direct insert failed:', writeErr); return; }
+    await sbClient.from('expenses').delete().eq('id', testId);
+    console.log('[diag] Direct insert + delete: OK');
+
+    // Test via sbSaveExpense (the actual save path used by the app)
+    const fakeExpense = { id: 'diag-exp-' + Date.now(), name: '__diagExp__', cat: 'Other', entries: [
+      { id: 'diag-en-' + Date.now(), date: '2099-01-01', amount: 1, note: '', paidBy: '' }
+    ]};
+    try {
+      await sbSaveExpense('2099-01', fakeExpense);
+      await sbClient.from('expense_entries').delete().eq('expense_id', fakeExpense.id);
+      await sbClient.from('expenses').delete().eq('id', fakeExpense.id);
+      console.log('[diag] sbSaveExpense: OK — actual save path works!');
+    } catch(saveErr) {
+      console.error('[diag] sbSaveExpense FAILED:', saveErr);
+    }
   } catch(e) { console.error('[diag] Exception:', e); }
+};
+
+// Re-push all localStorage data to Supabase — run if data is missing from Supabase
+window._resync = async function() {
+  const local = localStorage.getItem('expTrackerV5');
+  if (!local) { console.warn('[resync] No localStorage data found'); return; }
+  const localState = JSON.parse(local);
+  console.log('[resync] Starting re-sync from localStorage...');
+  try {
+    localStorage.removeItem('sb_migrated');
+    await sbMigrateFromLocalStorage(localState);
+    console.log('[resync] Done! Reloading...');
+    location.reload();
+  } catch(e) { console.error('[resync] Failed:', e); }
 };
 </script>
 <div id="syncToast" onclick="this.style.display='none'"></div>
