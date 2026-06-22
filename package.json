@@ -1,0 +1,13 @@
+{
+  "name": "expense-tracker",
+  "version": "1.0.0",
+  "description": "Single-user expense tracker with Google Sheets backup",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.0"
+  }
+}

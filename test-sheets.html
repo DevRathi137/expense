@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Google Sheets Integration</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #0B0C0F;
+      color: #E6E8EE;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #7B8BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background: #6070FF;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #13151A;
+      border: 1px solid #22252E;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .success { color: #46D29A; }
+    .error { color: #F26B6B; }
+    .info { color: #7B8BFF; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Google Sheets Integration Test</h1>
+  <p>This will test your Google Apps Script deployment</p>
+  
+  <div>
+    <button onclick="testSave()">1. Test Save</button>
+    <button onclick="testLoad()">2. Test Load</button>
+    <button onclick="testFullCycle()">3. Full Cycle Test</button>
+  </div>
+  
+  <div id="result"></div>
+
+  <script>
+    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw6FAUuNJHO6HeYDnO0nDEorIzWctpadw2HTBGJhMs2jITY314VpCgV8l_C6QWJx_WX/exec';
+    
+    function log(message, type = 'info') {
+      const result = document.getElementById('result');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type;
+      result.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+      result.scrollTop = result.scrollHeight;
+    }
+
+    async function testSave() {
+      document.getElementById('result').innerHTML = '';
+      log('Testing SAVE to Google Sheets...', 'info');
+      
+      const testData = {
+        action: 'save',
+        dataType: 'full_state',
+        state: {
+          expenses: {
+            '2026-06': [{
+              id: 'test-' + Date.now(),
+              name: 'Test Expense',
+              cat: 'Food',
+              entries: [{
+                id: 'entry-' + Date.now(),
+                date: '2026-06-22',
+                amount: 500,
+                note: 'Test entry'
+              }]
+            }]
+          },
+          people: [],
+          splits: {},
+          wishlist: [],
+          settlements: {},
+          budget: 30000
+        }
+      };
+
+      try {
+        log('Sending data to: ' + SHEETS_URL);
+        const response = await fetch(SHEETS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testData)
+        });
+
+        log('Response status: ' + response.status);
+        const result = await response.json();
+        
+        if (result.success) {
+          log('✓ SAVE SUCCESS!', 'success');
+          log('Timestamp: ' + result.timestamp, 'success');
+          log('Data saved to your Google Sheet!', 'success');
+        } else {
+          log('✗ SAVE FAILED', 'error');
+          log('Error: ' + (result.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        log('✗ EXCEPTION', 'error');
+        log('Error: ' + err.message, 'error');
+        log('Stack: ' + err.stack, 'error');
+      }
+    }
+
+    async function testLoad() {
+      document.getElementById('result').innerHTML = '';
+      log('Testing LOAD from Google Sheets...', 'info');
+
+      try {
+        log('Fetching data from: ' + SHEETS_URL);
+        const response = await fetch(SHEETS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'load' })
+        });
+
+        log('Response status: ' + response.status);
+        const result = await response.json();
+        
+        if (result.success) {
+          log('✓ LOAD SUCCESS!', 'success');
+          log('Data loaded from Google Sheet:', 'success');
+          log(JSON.stringify(result.state, null, 2), 'info');
+          
+          // Check if we have the test data
+          if (result.state && result.state.expenses && Object.keys(result.state.expenses).length > 0) {
+            log('✓ Found expense data!', 'success');
+          } else {
+            log('⚠ No expense data found - run Test Save first', 'error');
+          }
+        } else {
+          log('✗ LOAD FAILED', 'error');
+          log('Error: ' + (result.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        log('✗ EXCEPTION', 'error');
+        log('Error: ' + err.message, 'error');
+      }
+    }
+
+    async function testFullCycle() {
+      document.getElementById('result').innerHTML = '';
+      log('Testing FULL CYCLE (Save → Load → Verify)...', 'info');
+      
+      // Generate unique test data
+      const testId = 'test-' + Date.now();
+      const testData = {
+        action: 'save',
+        dataType: 'full_state',
+        state: {
+          expenses: {
+            '2026-06': [{
+              id: testId,
+              name: 'Full Cycle Test',
+              cat: 'Shopping',
+              entries: [{
+                id: 'entry-' + Date.now(),
+                date: '2026-06-22',
+                amount: 999,
+                note: 'Unique test entry'
+              }]
+            }]
+          },
+          people: [{ id: 'person-1', name: 'Test User' }],
+          splits: {},
+          wishlist: [{ id: 'wish-1', name: 'Test Wish', cost: 5000, cat: 'Other', type: 'want', done: false }],
+          settlements: {},
+          budget: 40000
+        }
+      };
+
+      try {
+        // Step 1: Save
+        log('\n[1/3] Saving test data...', 'info');
+        const saveResponse = await fetch(SHEETS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testData)
+        });
+        const saveResult = await saveResponse.json();
+        
+        if (!saveResult.success) {
+          log('✗ Save failed: ' + saveResult.error, 'error');
+          return;
+        }
+        log('✓ Save successful', 'success');
+
+        // Step 2: Wait a moment
+        log('\n[2/3] Waiting 2 seconds...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Step 3: Load and verify
+        log('\n[3/3] Loading data back...', 'info');
+        const loadResponse = await fetch(SHEETS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'load' })
+        });
+        const loadResult = await loadResponse.json();
+        
+        if (!loadResult.success) {
+          log('✗ Load failed: ' + loadResult.error, 'error');
+          return;
+        }
+        log('✓ Load successful', 'success');
+
+        // Verify data integrity
+        log('\n[VERIFICATION]', 'info');
+        const loaded = loadResult.state;
+        
+        if (loaded.budget === 40000) {
+          log('✓ Budget matches (40000)', 'success');
+        } else {
+          log('✗ Budget mismatch: expected 40000, got ' + loaded.budget, 'error');
+        }
+        
+        if (loaded.people && loaded.people.length === 1) {
+          log('✓ People count matches (1)', 'success');
+        } else {
+          log('✗ People mismatch: expected 1, got ' + (loaded.people?.length || 0), 'error');
+        }
+        
+        if (loaded.wishlist && loaded.wishlist.length === 1) {
+          log('✓ Wishlist count matches (1)', 'success');
+        } else {
+          log('✗ Wishlist mismatch: expected 1, got ' + (loaded.wishlist?.length || 0), 'error');
+        }
+        
+        const june = loaded.expenses?.['2026-06'];
+        if (june && june.length === 1 && june[0].id === testId) {
+          log('✓ Expense data matches (ID: ' + testId + ')', 'success');
+          log('✓ Expense amount: ₹' + june[0].entries[0].amount, 'success');
+        } else {
+          log('✗ Expense data mismatch', 'error');
+        }
+
+        log('\n✓✓✓ FULL CYCLE TEST PASSED! ✓✓✓', 'success');
+        log('Your Google Sheets integration is working correctly!', 'success');
+        
+      } catch (err) {
+        log('✗ EXCEPTION', 'error');
+        log('Error: ' + err.message, 'error');
+      }
+    }
+
+    // Auto-run on load
+    log('Ready to test! Click a button above.', 'info');
+    log('Your Google Apps Script URL: ' + SHEETS_URL, 'info');
+  </script>
+</body>
+</html>

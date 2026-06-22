@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quick Sheets Test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: linear-gradient(135deg, #0B0C0F 0%, #13151A 100%);
+      color: #E6E8EE;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: #13151A;
+      border: 1px solid #22252E;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    h1 {
+      color: #7B8BFF;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    p {
+      color: #9398A6;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      background: #7B8BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #6070FF; }
+    button:active { transform: scale(0.98); }
+    button:disabled {
+      background: #22252E;
+      color: #62677A;
+      cursor: not-allowed;
+    }
+    #log {
+      margin-top: 20px;
+      background: #0B0C0F;
+      border: 1px solid #22252E;
+      border-radius: 6px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .log-line {
+      margin: 4px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid #191B22;
+    }
+    .log-line:last-child { border-bottom: none; }
+    .success { color: #46D29A; }
+    .error { color: #F26B6B; }
+    .info { color: #7B8BFF; }
+    .time {
+      color: #62677A;
+      font-size: 10px;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Google Sheets Test</h1>
+    <p>Test your Google Apps Script integration</p>
+    
+    <button onclick="testSave()" id="saveBtn">💾 Test Save</button>
+    <button onclick="testLoad()" id="loadBtn">📥 Test Load</button>
+    <button onclick="runFullTest()" id="fullBtn">🔄 Full Test (Save → Load)</button>
+    
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw6FAUuNJHO6HeYDnO0nDEorIzWctpadw2HTBGJhMs2jITY314VpCgV8l_C6QWJx_WX/exec';
+    
+    function log(msg, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = 'log-line ' + type;
+      line.innerHTML = `<span class="time">${time}</span>${msg}`;
+      logDiv.appendChild(line);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    function disableButtons(disabled) {
+      document.getElementById('saveBtn').disabled = disabled;
+      document.getElementById('loadBtn').disabled = disabled;
+      document.getElementById('fullBtn').disabled = disabled;
+    }
+
+    async function testSave() {
+      clearLog();
+      disableButtons(true);
+      log('Starting save test...', 'info');
+      
+      const testData = {
+        action: 'save',
+        dataType: 'full_state',
+        state: {
+          expenses: {
+            '2026-06': [{
+              id: 'test-' + Date.now(),
+              name: 'Test Expense',
+              cat: 'Food',
+              entries: [{
+                id: 'e' + Date.now(),
+                date: '2026-06-22',
+                amount: 500,
+                note: 'Test'
+              }]
+            }]
+          },
+          people: [],
+          splits: {},
+          wishlist: [],
+          settlements: {},
+          budget: 30000
+        }
+      };
+
+      try {
+        log('Sending to Google Apps Script...', 'info');
+        const res = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(testData)
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+          log('✓ SAVE SUCCESS!', 'success');
+          log(`Saved at: ${result.timestamp}`, 'success');
+          log('Check your Google Sheet - you should see the data!', 'success');
+        } else {
+          log('✗ Save failed: ' + (result.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        log('✗ Error: ' + err.message, 'error');
+      } finally {
+        disableButtons(false);
+      }
+    }
+
+    async function testLoad() {
+      clearLog();
+      disableButtons(true);
+      log('Starting load test...', 'info');
+
+      try {
+        log('Fetching from Google Apps Script...', 'info');
+        const res = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'load' })
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+          log('✓ LOAD SUCCESS!', 'success');
+          const state = result.state;
+          log(`Budget: ₹${state.budget}`, 'info');
+          log(`Expenses: ${Object.keys(state.expenses || {}).length} months`, 'info');
+          log(`People: ${(state.people || []).length}`, 'info');
+          log(`Wishlist: ${(state.wishlist || []).length} items`, 'info');
+          
+          if (Object.keys(state.expenses || {}).length > 0) {
+            log('✓ Found expense data!', 'success');
+          }
+        } else {
+          log('✗ Load failed: ' + (result.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        log('✗ Error: ' + err.message, 'error');
+      } finally {
+        disableButtons(false);
+      }
+    }
+
+    async function runFullTest() {
+      clearLog();
+      disableButtons(true);
+      log('Starting full cycle test...', 'info');
+
+      const uniqueId = Date.now();
+      const testData = {
+        action: 'save',
+        dataType: 'full_state',
+        state: {
+          expenses: {
+            '2026-06': [{
+              id: 'test' + uniqueId,
+              name: 'Full Cycle Test',
+              cat: 'Shopping',
+              entries: [{
+                id: 'e' + uniqueId,
+                date: '2026-06-22',
+                amount: 999,
+                note: 'Cycle test'
+              }]
+            }]
+          },
+          people: [{ id: 'p1', name: 'Test User' }],
+          splits: {},
+          wishlist: [{ id: 'w1', name: 'Test Wish', cost: 5000, cat: 'Other', type: 'want', done: false }],
+          settlements: {},
+          budget: 45000
+        }
+      };
+
+      try {
+        // Save
+        log('[1/3] Saving test data...', 'info');
+        const saveRes = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(testData)
+        });
+        const saveResult = await saveRes.json();
+        
+        if (!saveResult.success) {
+          log('✗ Save failed: ' + saveResult.error, 'error');
+          disableButtons(false);
+          return;
+        }
+        log('✓ Saved', 'success');
+
+        // Wait
+        log('[2/3] Waiting 2 seconds...', 'info');
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Load
+        log('[3/3] Loading back...', 'info');
+        const loadRes = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'load' })
+        });
+        const loadResult = await loadRes.json();
+        
+        if (!loadResult.success) {
+          log('✗ Load failed: ' + loadResult.error, 'error');
+          disableButtons(false);
+          return;
+        }
+        log('✓ Loaded', 'success');
+
+        // Verify
+        const s = loadResult.state;
+        let passed = 0, failed = 0;
+        
+        if (s.budget === 45000) {
+          log('✓ Budget: ₹45,000', 'success');
+          passed++;
+        } else {
+          log(`✗ Budget mismatch: ${s.budget}`, 'error');
+          failed++;
+        }
+        
+        if (s.people?.length === 1) {
+          log('✓ People: 1 person', 'success');
+          passed++;
+        } else {
+          log(`✗ People count: ${s.people?.length}`, 'error');
+          failed++;
+        }
+        
+        if (s.wishlist?.length === 1) {
+          log('✓ Wishlist: 1 item', 'success');
+          passed++;
+        } else {
+          log(`✗ Wishlist count: ${s.wishlist?.length}`, 'error');
+          failed++;
+        }
+        
+        const june = s.expenses?.['2026-06'];
+        if (june?.[0]?.id === 'test' + uniqueId) {
+          log('✓ Expense data: ID matches', 'success');
+          passed++;
+        } else {
+          log('✗ Expense ID mismatch', 'error');
+          failed++;
+        }
+
+        if (failed === 0) {
+          log('', 'info');
+          log('🎉 ALL TESTS PASSED!', 'success');
+          log('Your Google Sheets integration is working!', 'success');
+        } else {
+          log(`⚠ ${passed} passed, ${failed} failed`, 'error');
+        }
+      } catch (err) {
+        log('✗ Exception: ' + err.message, 'error');
+      } finally {
+        disableButtons(false);
+      }
+    }
+
+    // Initial message
+    log('Ready! Click a button to test.', 'info');
+  </script>
+</body>
+</html>

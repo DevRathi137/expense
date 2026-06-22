@@ -3,7 +3,20 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git -C \"d:\\\\ZT\\\\zzzzz\\\\expense\" status)",
+      "Bash(git -C \"d:\\\\ZT\\\\zzzzz\\\\expense\" diff)",
+      "Bash(git -C \"d:\\\\ZT\\\\zzzzz\\\\expense\" log --oneline -3)",
+      "Bash(git -C \"d:\\\\ZT\\\\zzzzz\\\\expense\" show --stat HEAD)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "PowerShell(cd \"d:\\\\ZT\\\\zzzzz\\\\expense\"; Get-ChildItem -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "PowerShell(cd \"d:\\\\ZT\\\\zzzzz\\\\expense\"; Get-ChildItem -Recurse | Where-Object {-not $_.PSIsContainer} | ForEach-Object {$_.FullName -replace [regex]::Escape\\(\"d:\\\\ZT\\\\zzzzz\\\\expense\\\\\"\\), \"\"} | Sort-Object)",
+      "Bash(Get-Content \"d:\\\\ZT\\\\zzzzz\\\\expense\\\\index.html\")",
+      "Bash(Measure-Object -Line)",
+      "PowerShell(\\(Get-Content \"d:\\\\ZT\\\\zzzzz\\\\expense\\\\index.html\"\\).Count)",
+      "Bash(mkdir -p \"d:\\\\ZT\\\\zzzzz\\\\expense\\\\supabase\")",
+      "Bash(mkdir -p \"d:\\\\ZT\\\\zzzzz\\\\expense\\\\js\")"
     ]
   }
 }

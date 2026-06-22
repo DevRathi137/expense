@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
 
   const scriptUrl = process.env.SHEETS_SCRIPT_URL;
   if (!scriptUrl) {
-    return res.status(500).json({ error: 'SHEETS_SCRIPT_URL environment variable is not set' });
+    return res.status(500).json({ error: 'SHEETS_SCRIPT_URL not configured. Deploy Google Apps Script first.' });
   }
 
   try {
