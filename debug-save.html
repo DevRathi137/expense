@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Debug Save Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #0B0C0F; color: #E6E8EE; }
+    button { padding: 10px 20px; margin: 10px; background: #7B8BFF; color: white; border: none; cursor: pointer; }
+    #log { background: #13151A; padding: 15px; border: 1px solid #22252E; margin-top: 20px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Debug Save Test</h1>
+  <button onclick="testDirectSave()">Test Direct Save</button>
+  <button onclick="testViaAPI()">Test Via API</button>
+  <div id="log"></div>
+
+  <script>
+    const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw6FAUuNJHO6HeYDnO0nDEorIzWctpadw2HTBGJhMs2jITY314VpCgV8l_C6QWJx_WX/exec';
+    
+    function log(msg) {
+      document.getElementById('log').textContent += msg + '\n';
+    }
+
+    async function testDirectSave() {
+      document.getElementById('log').textContent = '';
+      log('Testing DIRECT save to Google Sheets...');
+      
+      const testData = {
+        action: 'save',
+        dataType: 'full_state',
+        state: {
+          expenses: {
+            '2026-06': [{
+              id: 'test123',
+              name: 'Test Expense',
+              cat: 'Food',
+              entries: [{
+                id: 'e123',
+                date: '2026-06-22',
+                amount: 500,
+                note: 'Test entry'
+              }]
+            }]
+          },
+          people: [{id: 'p1', name: 'John'}],
+          splits: {},
+          wishlist: [{id: 'w1', name: 'New Phone', cost: 25000, cat: 'Shopping', type: 'want', done: false}],
+          settlements: {},
+          budget: 35000
+        }
+      };
+
+      log('Payload: ' + JSON.stringify(testData, null, 2));
+      log('\nSending to: ' + SHEET_URL);
+
+      try {
+        const response = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(testData)
+        });
+
+        log('\nResponse status: ' + response.status);
+        const result = await response.json();
+        log('Response: ' + JSON.stringify(result, null, 2));
+
+        if (result.success) {
+          log('\n✓ SUCCESS! Check your Google Sheet "ExpenseData" tab');
+        } else {
+          log('\n✗ FAILED: ' + result.error);
+        }
+      } catch (err) {
+        log('\n✗ ERROR: ' + err.message);
+      }
+    }
+
+    async function testViaAPI() {
+      document.getElementById('log').textContent = '';
+      log('Testing save via /api/save-expense...');
+      
+      const testData = {
+        action: 'save',
+        dataType: 'full_state',
+        state: {
+          expenses: {
+            '2026-06': [{
+              id: 'api-test',
+              name: 'API Test',
+              cat: 'Transport',
+              entries: [{
+                id: 'eapi',
+                date: '2026-06-22',
+                amount: 1000,
+                note: 'Via API'
+              }]
+            }]
+          },
+          people: [],
+          splits: {},
+          wishlist: [],
+          settlements: {},
+          budget: 40000
+        }
+      };
+
+      log('Sending via API proxy...');
+
+      try {
+        const response = await fetch('/api/save-expense', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testData)
+        });
+
+        log('Response status: ' + response.status);
+        const result = await response.json();
+        log('Response: ' + JSON.stringify(result, null, 2));
+
+        if (result.success) {
+          log('\n✓ SUCCESS via API!');
+        } else {
+          log('\n✗ FAILED: ' + result.error);
+        }
+      } catch (err) {
+        log('\n✗ ERROR: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

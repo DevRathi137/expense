@@ -22,6 +22,8 @@ async function saveToSheet() {
   syncInProgress = true;
 
   try {
+    console.log('[Sheets] Saving state:', state);
+    
     const response = await fetch(SHEETS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -33,6 +35,7 @@ async function saveToSheet() {
     });
 
     const result = await response.json();
+    console.log('[Sheets] Save response:', result);
 
     if (result.success) {
       if (syncDot) {
@@ -42,11 +45,13 @@ async function saveToSheet() {
       console.log('[Sheets] Saved successfully at', result.timestamp);
       
       // Show brief success feedback
-      const originalText = saveBtn.textContent;
-      saveBtn.textContent = '✓ Saved';
-      setTimeout(() => {
-        if (saveBtn) saveBtn.textContent = originalText;
-      }, 2000);
+      if (saveBtn) {
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '✓ Saved';
+        setTimeout(() => {
+          if (saveBtn) saveBtn.textContent = originalText;
+        }, 2000);
+      }
     } else {
       throw new Error(result.error || 'Unknown error');
     }
@@ -73,6 +78,8 @@ async function loadFromSheet() {
   }
 
   try {
+    console.log('[Sheets] Loading from Google Sheets...');
+    
     const response = await fetch(SHEETS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -82,17 +89,21 @@ async function loadFromSheet() {
     });
 
     const result = await response.json();
+    console.log('[Sheets] Load response:', result);
 
     if (result.success && result.state) {
+      // Merge loaded state with current state
       state = result.state;
       _ensureStateDefaults();
+      
+      // Also save to localStorage as backup
       localStorage.setItem('expTrackerV5', JSON.stringify(state));
       
       if (syncDot) {
         syncDot.className = '';
         syncDot.title = 'Loaded from Google Sheets';
       }
-      console.log('[Sheets] Loaded successfully');
+      console.log('[Sheets] Loaded successfully:', state);
       return true;
     } else {
       throw new Error(result.error || 'Unknown error');
