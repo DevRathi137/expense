@@ -61,6 +61,46 @@
   --sh-md: 0 8px 24px rgba(0,0,0,.5);
   --sh-brand: 0 4px 16px rgba(123,139,255,.2);
 }
+
+/* ── LIGHT THEME ────────────────────────────────────── */
+:root[data-theme="light"]{
+  --bg:        #F5F7FA;
+  --surface:   #FFFFFF;
+  --surface-2: #F8F9FB;
+  --surface-3: #EEF1F5;
+  --s2: #F8F9FB;
+  --s3: #EEF1F5;
+
+  --border:    #E0E4E9;
+  --border-lt: #EBEEF2;
+
+  --ink-1: #1A1D24;
+  --ink-2: #4A5366;
+  --ink-3: #6B7280;
+  --ink-4: #9CA3AF;
+
+  --brand:    #5B6FE8;
+  --brand-dk: #4A5FD6;
+  --brand-lt: #EEF0FF;
+  --green:    #10B981;
+  --green-lt: rgba(16,185,129,.12);
+  --red:      #EF4444;
+  --red-lt:   rgba(239,68,68,.12);
+  --amber:    #F59E0B;
+
+  --cat-housing:       #5B6FE8;
+  --cat-food:          #10B981;
+  --cat-transport:     #F59E0B;
+  --cat-health:        #EC4899;
+  --cat-shopping:      #8B5CF6;
+  --cat-entertainment: #EF4444;
+  --cat-utilities:     #06B6D4;
+  --cat-other:         #6B7280;
+
+  --sh-sm: 0 1px 2px rgba(0,0,0,.08);
+  --sh-md: 0 4px 12px rgba(0,0,0,.1);
+  --sh-brand: 0 4px 16px rgba(91,111,232,.15);
+}
 body{font-family:var(--ff);background:var(--bg);color:var(--ink-1);-webkit-font-smoothing:antialiased;}
 input,select,button{font-family:var(--ff);}
 
@@ -198,6 +238,132 @@ input,select,button{font-family:var(--ff);}
 }
 .mp-btn:hover{background:var(--surface-2);color:var(--ink-1);}
 .mp-btn.active{background:var(--brand-lt);color:var(--brand);font-weight:600;}
+
+/* ── COLOR SETTINGS ─────────────────────────────────── */
+.color-settings-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  z-index:150;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .18s;
+}
+.color-settings-overlay.open{opacity:1;pointer-events:all;}
+.color-settings{
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--sh-md);
+  padding:16px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;
+}
+.cs-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);
+}
+.cs-tabs{
+  display:flex;gap:8px;margin-bottom:16px;
+  border-bottom:1px solid var(--border);padding-bottom:8px;
+}
+.cs-tab{
+  font-family:var(--ff-mono);font-size:11px;font-weight:500;
+  padding:6px 12px;border-radius:var(--r-sm);
+  background:transparent;border:none;color:var(--ink-3);
+  cursor:pointer;transition:background .12s,color .12s;
+}
+.cs-tab.active{background:var(--brand-lt);color:var(--brand);font-weight:600;}
+.cs-tab:hover:not(.active){background:var(--surface-2);color:var(--ink-2);}
+.cs-tab-content{display:none;}
+.cs-tab-content.active{display:block;}
+.cs-title{
+  font-family:var(--ff-mono);font-size:13px;font-weight:600;
+  color:var(--ink-1);letter-spacing:.02em;
+}
+.cs-close{
+  width:24px;height:24px;border-radius:var(--r-sm);border:none;
+  background:transparent;color:var(--ink-3);font-size:14px;
+  cursor:pointer;display:grid;place-items:center;
+  transition:background .12s,color .12s;
+}
+.cs-close:hover{background:var(--surface-2);color:var(--ink-1);}
+.cs-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 0;border-bottom:1px solid var(--border-lt);
+}
+.cs-item:last-child{border-bottom:none;}
+.cs-cat-dot{
+  width:16px;height:16px;border-radius:50%;
+  flex-shrink:0;border:2px solid var(--border);
+  cursor:pointer;transition:transform .12s;
+}
+.cs-cat-dot:hover{transform:scale(1.15);}
+.cs-cat-name{
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  color:var(--ink-1);flex:1;
+}
+.cs-color-input{
+  width:44px;height:28px;
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  cursor:pointer;padding:2px;background:var(--surface-2);
+}
+.cs-color-input::-webkit-color-swatch-wrapper{padding:0;}
+.cs-color-input::-webkit-color-swatch{border:none;border-radius:3px;}
+.cs-cat-input{
+  flex:1;height:26px;padding:0 8px;
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  color:var(--ink-1);background:var(--surface-2);outline:none;
+}
+.cs-cat-input:focus{border-color:var(--brand);}
+.cs-actions{
+  display:flex;gap:4px;align-items:center;
+}
+.cs-btn-edit,.cs-btn-del{
+  width:24px;height:24px;border-radius:var(--r-sm);border:none;
+  background:transparent;color:var(--ink-4);font-size:11px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;flex-shrink:0;
+}
+.cs-btn-edit:hover{background:var(--brand-lt);color:var(--brand);}
+.cs-btn-del:hover{background:var(--red-lt);color:var(--red);}
+.cs-add-section{
+  margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--border);
+}
+.cs-add-title{
+  font-family:var(--ff-mono);font-size:10px;font-weight:600;
+  color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:8px;
+}
+.cs-add-form{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+.cs-add-input{
+  flex:1;height:30px;padding:0 10px;
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  color:var(--ink-1);background:var(--surface-2);outline:none;
+}
+.cs-add-input:focus{border-color:var(--brand);}
+.cs-add-color{
+  width:40px;height:30px;
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  cursor:pointer;padding:2px;background:var(--surface-2);
+}
+.cs-add-color::-webkit-color-swatch-wrapper{padding:0;}
+.cs-add-color::-webkit-color-swatch{border:none;border-radius:3px;}
+.cs-btn-add{
+  height:30px;padding:0 12px;
+  background:var(--brand);color:#fff;
+  border:none;border-radius:var(--r-md);
+  font-family:var(--ff-mono);font-size:11px;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:opacity .15s;
+}
+.cs-btn-add:hover{opacity:.88;}
+.cs-reset{
+  margin-top:12px;width:100%;height:32px;
+  background:transparent;border:1px solid var(--border);
+  border-radius:var(--r-md);color:var(--ink-2);
+  font-family:var(--ff-mono);font-size:11px;font-weight:500;
+  cursor:pointer;transition:background .12s,color .12s;
+}
+.cs-reset:hover{background:var(--surface-2);color:var(--ink-1);}
 
 /* ── TAB NAV ─────────────────────────────────────────── */
 .tab-nav{
@@ -765,6 +931,8 @@ kbd{
       <button class="ic-btn" onclick="shiftMonth(-1)" title="Previous month">&#8249;</button>
       <button class="ic-btn" onclick="shiftMonth(+1)" title="Next month">&#8250;</button>
       <span class="topbar-divider"></span>
+      <button class="ic-btn" onclick="toggleTheme()" id="themeToggle" title="Toggle theme">&#9788;</button>
+      <button class="ic-btn" onclick="openColorSettings()" title="Category colors">&#9881;</button>
       <button class="ic-btn" onclick="switchTab('charts')" title="Charts">&#9636;</button>
       <button class="ic-btn" onclick="openReport()" title="Report">&#9654;</button>
       <span class="topbar-divider"></span>
@@ -1036,13 +1204,48 @@ kbd{
   </div>
 </div>
 
+<!-- COLOR SETTINGS -->
+<div class="color-settings-overlay" id="colorSettingsOverlay" onclick="closeColorSettings(event)">
+  <div class="color-settings" onclick="event.stopPropagation()">
+    <div class="cs-header">
+      <span class="cs-title">customize colors</span>
+      <button class="cs-close" onclick="closeColorSettings()">&#10005;</button>
+    </div>
+    <div class="cs-tabs">
+      <button class="cs-tab active" onclick="switchColorTab('categories')">categories</button>
+      <button class="cs-tab" onclick="switchColorTab('people')">people</button>
+    </div>
+    
+    <!-- Categories Tab -->
+    <div id="tab-categories" class="cs-tab-content active">
+      <div id="colorSettingsList"></div>
+      <div class="cs-add-section">
+        <div class="cs-add-title">add new category</div>
+        <div class="cs-add-form">
+          <input type="text" id="newCategoryName" class="cs-add-input" placeholder="Category name" 
+            onkeydown="if(event.key==='Enter')addNewCategory()"/>
+          <input type="color" id="newCategoryColor" class="cs-add-color" value="#7B8BFF"/>
+          <button class="cs-btn-add" onclick="addNewCategory()">+ add</button>
+        </div>
+      </div>
+      <button class="cs-reset" onclick="resetCategoryColors()">reset to defaults</button>
+    </div>
+    
+    <!-- People Tab -->
+    <div id="tab-people" class="cs-tab-content">
+      <div id="peopleColorList"></div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 /* ── CONSTANTS ──────────────────────────────────────── */
-const CATS = {
+const DEFAULT_CATS = {
   Housing:'#7B8BFF',Food:'#46D29A',Transport:'#F2C166',Health:'#F08CB4',
   Shopping:'#B58CFF',Entertainment:'#F26B6B',Utilities:'#5BD0CB',Other:'#62677A'
 };
+let CATS = {...DEFAULT_CATS};
 const PCOLS = [
   '#7B8BFF','#F08CB4','#F2C166','#46D29A',
   '#5BD0CB','#F26B6B','#B58CFF','#62677A','#E8A87C','#84CC16'
@@ -1060,6 +1263,250 @@ const TT={
 /* ── STATE ──────────────────────────────────────────── */
 let state = {expenses:{},wishlist:[],people:[],splits:{}};
 let currentMonth = (()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;})();
+
+/* ── THEME ──────────────────────────────────────────── */
+function loadTheme(){
+  const saved=localStorage.getItem('theme')||'dark';
+  document.documentElement.setAttribute('data-theme',saved);
+  updateThemeIcon();
+}
+function toggleTheme(){
+  const current=document.documentElement.getAttribute('data-theme')||'dark';
+  const next=current==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  updateThemeIcon();
+}
+function updateThemeIcon(){
+  const btn=document.getElementById('themeToggle');
+  const theme=document.documentElement.getAttribute('data-theme')||'dark';
+  if(btn)btn.innerHTML=theme==='dark'?'&#9788;':'&#9789;';
+}
+loadTheme();
+
+/* ── COLOR SETTINGS ─────────────────────────────────── */
+function loadCategoryColors(){
+  try{
+    const saved=localStorage.getItem('categoryColors');
+    if(saved){
+      const custom=JSON.parse(saved);
+      Object.assign(CATS,custom);
+    }
+  }catch(e){}
+}
+function saveCategoryColors(){
+  try{
+    localStorage.setItem('categoryColors',JSON.stringify(CATS));
+  }catch(e){}
+}
+function updateCategoryColor(cat,color){
+  CATS[cat]=color;
+  saveCategoryColors();
+  render();
+  if(document.getElementById('pane-charts').classList.contains('active')){
+    setTimeout(renderCharts,50);
+  }
+  renderColorSettingsList();
+}
+function resetCategoryColors(){
+  CATS=Object.assign({},DEFAULT_CATS);
+  localStorage.removeItem('categoryColors');
+  render();
+  if(document.getElementById('pane-charts').classList.contains('active')){
+    setTimeout(renderCharts,50);
+  }
+  renderColorSettingsList();
+}
+function switchColorTab(tab){
+  document.querySelectorAll('.cs-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.cs-tab-content').forEach(c=>c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='people')renderPeopleColorList();
+}
+function openColorSettings(){
+  renderColorSettingsList();
+  renderPeopleColorList();
+  document.getElementById('colorSettingsOverlay').classList.add('open');
+}
+function closeColorSettings(e){
+  if(!e||e.target.id==='colorSettingsOverlay'){
+    document.getElementById('colorSettingsOverlay').classList.remove('open');
+  }
+}
+function renderColorSettingsList(){
+  const list=document.getElementById('colorSettingsList');
+  const editingCat=window._editingCategory;
+  list.innerHTML=Object.entries(CATS).map(([cat,color])=>{
+    const isDefault=DEFAULT_CATS.hasOwnProperty(cat);
+    const isEditing=editingCat===cat;
+    
+    if(isEditing){
+      return `<div class="cs-item">
+        <div class="cs-cat-dot" style="background:${color};"></div>
+        <input type="text" id="edit-cat-${cat}" class="cs-cat-input" value="${cat}" 
+          onkeydown="if(event.key==='Enter')saveCategoryEdit('${cat}');if(event.key==='Escape')cancelCategoryEdit()"/>
+        <div class="cs-actions">
+          <button class="cs-btn-edit" onclick="saveCategoryEdit('${cat}')" title="Save">✓</button>
+          <button class="cs-btn-del" onclick="cancelCategoryEdit()" title="Cancel">✕</button>
+        </div>
+      </div>`;
+    }
+    
+    return `<div class="cs-item">
+      <div class="cs-cat-dot" style="background:${color};" onclick="document.getElementById('color-${cat}').click()"></div>
+      <span class="cs-cat-name">${cat}</span>
+      <div class="cs-actions">
+        <input type="color" id="color-${cat}" class="cs-color-input" value="${color}" 
+          onchange="updateCategoryColor('${cat}',this.value)"/>
+        ${!isDefault?`<button class="cs-btn-edit" onclick="startCategoryEdit('${cat}')" title="Rename">✎</button>`:''}
+        ${!isDefault?`<button class="cs-btn-del" onclick="deleteCategory('${cat}')" title="Delete">✕</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function addNewCategory(){
+  const nameInput=document.getElementById('newCategoryName');
+  const colorInput=document.getElementById('newCategoryColor');
+  const name=nameInput.value.trim();
+  const color=colorInput.value;
+  
+  if(!name){
+    alert('Please enter a category name');
+    return;
+  }
+  
+  if(CATS.hasOwnProperty(name)){
+    alert('Category already exists');
+    return;
+  }
+  
+  CATS[name]=color;
+  saveCategoryColors();
+  updateAllCategorySelects();
+  renderColorSettingsList();
+  nameInput.value='';
+  colorInput.value='#7B8BFF';
+}
+function startCategoryEdit(cat){
+  window._editingCategory=cat;
+  renderColorSettingsList();
+  setTimeout(()=>{
+    const input=document.getElementById('edit-cat-'+cat);
+    if(input){input.focus();input.select();}
+  },10);
+}
+function cancelCategoryEdit(){
+  window._editingCategory=null;
+  renderColorSettingsList();
+}
+function saveCategoryEdit(oldName){
+  const input=document.getElementById('edit-cat-'+oldName);
+  const newName=input?input.value.trim():'';
+  
+  if(!newName||newName===oldName){
+    cancelCategoryEdit();
+    return;
+  }
+  
+  if(CATS.hasOwnProperty(newName)&&newName!==oldName){
+    alert('Category name already exists');
+    return;
+  }
+  
+  const color=CATS[oldName];
+  delete CATS[oldName];
+  CATS[newName]=color;
+  
+  const m=getMonth();
+  (state.expenses[m]||[]).forEach(e=>{if(e.cat===oldName)e.cat=newName;});
+  state.wishlist.forEach(w=>{if(w.cat===oldName)w.cat=newName;});
+  
+  saveCategoryColors();
+  saveState();
+  updateAllCategorySelects();
+  window._editingCategory=null;
+  render();
+  renderColorSettingsList();
+}
+function deleteCategory(cat){
+  if(DEFAULT_CATS.hasOwnProperty(cat)){
+    alert('Cannot delete default categories');
+    return;
+  }
+  
+  const m=getMonth();
+  const hasExpenses=(state.expenses[m]||[]).some(e=>e.cat===cat);
+  const hasWishes=state.wishlist.some(w=>w.cat===cat);
+  
+  if(hasExpenses||hasWishes){
+    if(!confirm(`Category "${cat}" is in use. Move items to "Other" category?`)){
+      return;
+    }
+    (state.expenses[m]||[]).forEach(e=>{if(e.cat===cat)e.cat='Other';});
+    state.wishlist.forEach(w=>{if(w.cat===cat)w.cat='Other';});
+    saveState();
+  }
+  
+  delete CATS[cat];
+  saveCategoryColors();
+  updateAllCategorySelects();
+  render();
+  renderColorSettingsList();
+}
+function updateAllCategorySelects(){
+  const selects=document.querySelectorAll('#newCat,#wishCat,[id^="ecat-"],[id^="wcat-"]');
+  selects.forEach(sel=>{
+    const current=sel.value;
+    const cats=Object.keys(CATS);
+    sel.innerHTML=cats.map(c=>`<option value="${c}"${c===current?' selected':''}>${c}</option>`).join('');
+  });
+}
+
+/* ── PEOPLE COLOR MANAGEMENT ────────────────────────── */
+function getPersonColor(personId){
+  if(!personId)return PCOLS[0];
+  if(!state.personColors)state.personColors={};
+  if(state.personColors[personId])return state.personColors[personId];
+  const idx=state.people.findIndex(p=>p.id===personId);
+  return idx>=0?PCOLS[idx%PCOLS.length]:PCOLS[0];
+}
+function setPersonColor(personId,color){
+  if(!state.personColors)state.personColors={};
+  state.personColors[personId]=color;
+  saveState();
+  render();
+  if(document.getElementById('pane-charts').classList.contains('active')){
+    setTimeout(renderCharts,50);
+  }
+  if(document.getElementById('pane-split').classList.contains('active')){
+    renderSplit();
+  }
+  renderPeopleColorList();
+}
+function renderPeopleColorList(){
+  const list=document.getElementById('peopleColorList');
+  if(!list)return;
+  
+  if(state.people.length===0){
+    list.innerHTML='<div class="empty"><div class="empty-title">no people added yet</div><div class="empty-desc">Add people in the Split tab to customize their colors here.</div></div>';
+    return;
+  }
+  
+  list.innerHTML=state.people.map((p,i)=>{
+    const color=getPersonColor(p.id);
+    return `<div class="cs-item">
+      <div class="cs-cat-dot" style="background:${color};" onclick="document.getElementById('pcolor-${p.id}').click()"></div>
+      <span class="cs-cat-name">${escHtml(p.name)}</span>
+      <div class="cs-actions">
+        <input type="color" id="pcolor-${p.id}" class="cs-color-input" value="${color}" 
+          onchange="setPersonColor('${p.id}',this.value)"/>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+loadCategoryColors();
 
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -1161,8 +1608,7 @@ function renderExpCard(expenses){
       const entryRows=entries.length>0
         ?entries.map(en=>{
           const payer=en.paidBy?state.people.find(p=>p.id===en.paidBy):null;
-          const pi=payer?state.people.indexOf(payer):-1;
-          const pcol=pi>=0?PCOLS[pi%PCOLS.length]:null;
+          const pcol=payer?getPersonColor(payer.id):null;
           if(editingEntry.has(en.id)){
             return `<div class="entry-row" style="flex-wrap:wrap;gap:6px;background:var(--surface-3);">
               <input class="entry-fc entry-fc-date" type="date" id="eed-${en.id}" value="${en.date}">
@@ -1469,7 +1915,7 @@ function updatePsnSummary(){
   const rows=totals.map(({p,i,amt})=>{
     const pct=total>0?Math.round(amt/total*100):0;
     const bar=Math.round(amt/maxAmt*100);
-    const col=PCOLS[i%PCOLS.length];
+    const col=getPersonColor(p.id);
     return `<div class="psn-card" style="background:${col}10;border-color:${col}25;">
       <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${col};border-radius:var(--r-md) var(--r-md) 0 0;"></div>
       <div class="psn-top"><div class="psn-av" style="background:${col}">${initials(p.name)}</div><span class="psn-name">${escHtml(p.name)}</span></div>
@@ -1570,10 +2016,8 @@ function renderSettlement(){
   const m=getMonth();
   const settled=state.settlements[m]||{};
   el.innerHTML=txns.map(t=>{
-    const fi=state.people.indexOf(state.people.find(p=>p.id===t.from.id));
-    const ti=state.people.indexOf(state.people.find(p=>p.id===t.to.id));
-    const fc=PCOLS[fi>=0?fi%PCOLS.length:0];
-    const tc=PCOLS[ti>=0?ti%PCOLS.length:1];
+    const fc=getPersonColor(t.from.id);
+    const tc=getPersonColor(t.to.id);
     const key=t.from.id+'_'+t.to.id;
     const paid=settled[key]||0;
     const rem=Math.round(t.amt-paid);
@@ -1627,7 +2071,7 @@ function renderSplit(){
     pw.innerHTML='<div style="font-family:var(--ff-mono);font-size:11px;color:var(--ink-3);padding:2px 0;width:100%;">No people yet. Add a name below.</div>';
   }else{
     pw.innerHTML=people.map((p,i)=>{
-      const col=PCOLS[i%PCOLS.length];
+      const col=getPersonColor(p.id);
       return `<span class="person-chip" style="border-color:${col}30;background:${col}10;">
         <div class="p-avatar" style="background:${col}">${initials(p.name)}</div>
         ${escHtml(p.name)}
@@ -1642,7 +2086,7 @@ function renderSplit(){
   }else if(people.length===0){
     tbl.innerHTML=`<tr><td><div class="empty" style="padding:28px 20px;"><div class="empty-title">add people to start splitting</div></div></td></tr>`;
   }else{
-    const headers=['Expense','Total',...people.map((_,i)=>`<span style="color:${PCOLS[i%PCOLS.length]};font-weight:700;">${escHtml(people[i].name)}</span>`),'Left'];
+    const headers=['Expense','Total',...people.map((p,i)=>`<span style="color:${getPersonColor(p.id)};font-weight:700;">${escHtml(p.name)}</span>`),'Left'];
     const thead=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>`;
     const tbody=`<tbody>${expenses.map(e=>{
       const expSp=splits[e.id]||{};
@@ -1723,7 +2167,7 @@ function renderCharts(){
   const pTotals=state.people.map((p,i)=>({
     name:p.name,
     total:expenses.reduce((s,e)=>s+((splits[e.id]||{})[p.id]||0),0),
-    color:PCOLS[i%PCOLS.length]
+    color:getPersonColor(p.id)
   })).filter(pt=>pt.total>0);
 
   if(pTotals.length>0){
@@ -1742,7 +2186,7 @@ function renderCharts(){
       data:{labels:pML,datasets:state.people.map((p,i)=>({
         label:p.name,
         data:pM.map(k=>{const sp=state.splits[k]||{};return Math.round((state.expenses[k]||[]).reduce((s,e)=>s+((sp[e.id]||{})[p.id]||0),0));}),
-        backgroundColor:PCOLS[i%PCOLS.length],
+        backgroundColor:getPersonColor(p.id),
         borderRadius:i===state.people.length-1?5:0,borderSkipped:false
       }))},
       options:{responsive:true,maintainAspectRatio:false,
@@ -1923,7 +2367,7 @@ async function exportReport(){
     const pTotals=state.people.map((p,i)=>({
       name:p.name,
       total:expenses.reduce((s,e)=>s+((splits[e.id]||{})[p.id]||0),0),
-      color:PCOLS[i%PCOLS.length]
+      color:getPersonColor(p.id)
     })).filter(pt=>pt.total>0);
 
     const wrap=document.createElement('div');

@@ -68,7 +68,7 @@ function saveData(sheet, data) {
     // Update existing row
     sheet.getRange(rowIndex, 1, 1, 3).setValues([[timestamp, dataType, jsonData]]);
   } else {
-    // Append new row
+    // Append new row (first time only)
     sheet.appendRow([timestamp, dataType, jsonData]);
   }
   
