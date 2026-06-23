@@ -2250,6 +2250,13 @@ function saveBudget(val){
   render();
 }
 
+
+</script>
+
+<!-- Google Sheets Sync -->
+<script src="js/sheets-sync.js"></script>
+
+<script>
 /* ── INIT ───────────────────────────────────────────── */
 (async function init() {
   // Try to load from Google Sheets first
@@ -2263,11 +2270,7 @@ function saveBudget(val){
   render();
   populatePaidBySelects();
 })();
-
 </script>
-
-<!-- Google Sheets Sync -->
-<script src="js/sheets-sync.js"></script>
 
 </body>
 </html>

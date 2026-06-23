@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
   try {
     const response = await fetch(scriptUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(req.body),
       redirect: 'follow',
     });

@@ -2,8 +2,17 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config(); // Load .env file
 
 const PORT = 3000;
+const SHEETS_URL = process.env.SHEETS_SCRIPT_URL;
+
+if (!SHEETS_URL) {
+  console.error('❌ ERROR: SHEETS_SCRIPT_URL not found in .env file!');
+  process.exit(1);
+}
+
+console.log('✅ Using Google Sheets URL:', SHEETS_URL);
 
 const mimeTypes = {
   '.html': 'text/html',
@@ -22,23 +31,27 @@ const server = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const data = JSON.parse(body);
-        const SHEETS_URL = process.env.SHEETS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbw6FAUuNJHO6HeYDnO0nDEorIzWctpadw2HTBGJhMs2jITY314VpCgV8l_C6QWJx_WX/exec';
+        
+        console.log('Forwarding to Google Sheets:', SHEETS_URL);
         
         // Forward to Google Sheets
         const fetch = (await import('node-fetch')).default;
         const response = await fetch(SHEETS_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(data)
         });
 
         const result = await response.text();
+        console.log('Google Sheets response:', result.substring(0, 200));
+        
         res.writeHead(200, { 
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         });
         res.end(result);
       } catch (err) {
+        console.error('API Error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
