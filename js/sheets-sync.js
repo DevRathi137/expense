@@ -6,7 +6,7 @@ let syncInProgress = false;
 // Save all state to Google Sheets
 async function saveToSheet() {
   if (syncInProgress) {
-    console.log('[Sheets] Save already in progress...');
+    if(typeof showToast==='function')showToast('Sync already in progress','info');
     return;
   }
 
@@ -18,12 +18,11 @@ async function saveToSheet() {
     syncDot.className = 'syncing';
     syncDot.title = 'Syncing to Google Sheets...';
   }
+  if(typeof showLoading==='function')showLoading('Saving to Google Sheets...');
 
   syncInProgress = true;
 
   try {
-    console.log('[Sheets] Saving state:', state);
-    
     const response = await fetch(SHEETS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,23 +34,13 @@ async function saveToSheet() {
     });
 
     const result = await response.json();
-    console.log('[Sheets] Save response:', result);
 
     if (result.success) {
       if (syncDot) {
         syncDot.className = '';
         syncDot.title = 'Last synced: ' + new Date().toLocaleTimeString();
       }
-      console.log('[Sheets] Saved successfully at', result.timestamp);
-      
-      // Show brief success feedback
-      if (saveBtn) {
-        const originalText = saveBtn.textContent;
-        saveBtn.textContent = '✓ Saved';
-        setTimeout(() => {
-          if (saveBtn) saveBtn.textContent = originalText;
-        }, 2000);
-      }
+      if(typeof showToast==='function')showToast('Saved to Google Sheets ✓','success');
     } else {
       throw new Error(result.error || 'Unknown error');
     }
@@ -61,10 +50,11 @@ async function saveToSheet() {
       syncDot.className = 'error';
       syncDot.title = 'Sync error: ' + err.message;
     }
-    alert('Failed to save to Google Sheets: ' + err.message);
+    if(typeof showToast==='function')showToast('Failed to save: ' + err.message,'error');
   } finally {
     syncInProgress = false;
     if (saveBtn) saveBtn.disabled = false;
+    if(typeof hideLoading==='function')hideLoading();
   }
 }
 
@@ -95,6 +85,7 @@ async function loadFromSheet() {
       // Merge loaded state with current state
       state = result.state;
       _ensureStateDefaults();
+      loadCategoryColors(); // apply state.categoryColors onto CATS
       
       // Also save to localStorage as backup
       localStorage.setItem('expTrackerV5', JSON.stringify(state));

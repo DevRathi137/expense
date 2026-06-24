@@ -356,6 +356,24 @@ input,select,button{font-family:var(--ff);}
   cursor:pointer;white-space:nowrap;transition:opacity .15s;
 }
 .cs-btn-add:hover{opacity:.88;}
+.cs-presets{
+  margin-bottom:12px;padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+.cs-presets-title{
+  font-family:var(--ff-mono);font-size:9px;font-weight:600;
+  color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:8px;
+}
+.cs-preset-grid{display:flex;gap:6px;flex-wrap:wrap;}
+.cs-preset-btn{
+  padding:6px 12px;border-radius:var(--r-sm);
+  background:var(--surface-2);border:1px solid var(--border);
+  font-family:var(--ff-mono);font-size:11px;font-weight:500;
+  color:var(--ink-2);cursor:pointer;
+  transition:all .12s;
+}
+.cs-preset-btn:hover{background:var(--surface-3);color:var(--ink-1);transform:translateY(-1px);}
 .cs-reset{
   margin-top:12px;width:100%;height:32px;
   background:transparent;border:1px solid var(--border);
@@ -907,6 +925,93 @@ kbd{
   }
 }
 
+/* ── TOAST NOTIFICATIONS ────────────────────────────── */
+.toast-container{
+  position:fixed;top:16px;right:16px;z-index:250;
+  display:flex;flex-direction:column;gap:8px;
+  pointer-events:none;max-width:320px;
+}
+.toast{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:12px 16px;
+  box-shadow:var(--sh-md);
+  display:flex;align-items:center;gap:10px;
+  pointer-events:all;
+  animation:slideIn .3s ease;
+  transition:opacity .3s,transform .3s;
+}
+.toast.hiding{opacity:0;transform:translateX(100px);}
+@keyframes slideIn{from{opacity:0;transform:translateX(100px);}to{opacity:1;transform:translateX(0);}}
+.toast-icon{
+  width:20px;height:20px;border-radius:50%;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+}
+.toast.success .toast-icon{background:var(--green-lt);color:var(--green);}
+.toast.error .toast-icon{background:var(--red-lt);color:var(--red);}
+.toast.info .toast-icon{background:var(--brand-lt);color:var(--brand);}
+.toast-message{
+  flex:1;font-family:var(--ff);font-size:13px;
+  color:var(--ink-1);line-height:1.4;
+}
+.toast-close{
+  background:none;border:none;width:20px;height:20px;
+  border-radius:var(--r-sm);color:var(--ink-4);
+  font-size:14px;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;
+}
+.toast-close:hover{background:var(--surface-2);color:var(--ink-1);}
+
+/* ── LOADING SPINNER ────────────────────────────────── */
+.loading-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  z-index:300;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.loading-overlay.active{opacity:1;pointer-events:all;}
+.spinner{
+  width:40px;height:40px;
+  border:3px solid var(--border);
+  border-top-color:var(--brand);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,60px);
+  font-family:var(--ff-mono);font-size:12px;
+  color:var(--ink-1);
+}
+
+/* ── HOVER PREVIEW ──────────────────────────────────── */
+.exp-preview{
+  position:absolute;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:10px 12px;
+  box-shadow:var(--sh-md);
+  z-index:100;
+  pointer-events:none;
+  opacity:0;transition:opacity .2s;
+  min-width:200px;
+}
+.exp-preview.show{opacity:1;}
+.exp-preview-label{
+  font-family:var(--ff-mono);font-size:9px;font-weight:600;
+  color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:4px;
+}
+.exp-preview-value{
+  font-family:var(--ff-mono);font-size:12px;
+  color:var(--ink-1);margin-bottom:6px;
+}
+.exp-preview-entries{
+  font-family:var(--ff);font-size:11px;
+  color:var(--ink-2);line-height:1.5;
+}
+
 </style>
 </head>
 <body>
@@ -1028,11 +1133,56 @@ kbd{
           </div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">recurring expenses</span>
+          <span style="font-family:var(--ff-mono);font-size:10px;color:var(--ink-4);">auto-add monthly</span>
+        </div>
+        <div id="recurringPanel"></div>
+        <div class="form-section" style="border-top:1px solid var(--border-lt);padding-top:12px;">
+          <div class="f-row">
+            <div class="f-wrap" style="flex:2;min-width:120px;">
+              <span class="f-lbl">name</span>
+              <input class="fc" type="text" id="recName" placeholder="e.g. Rent" onkeydown="if(event.key==='Enter')addRecurring()"/>
+            </div>
+            <div class="f-wrap" style="flex:0 0 100px;min-width:0;">
+              <span class="f-lbl">amount</span>
+              <div class="amt-wrap">
+                <span class="amt-pfx">&#8377;</span>
+                <input class="fc" type="number" id="recAmt" placeholder="0" min="0"/>
+              </div>
+            </div>
+          </div>
+          <div class="f-row" style="margin-top:10px;">
+            <div class="f-wrap" style="min-width:120px;">
+              <span class="f-lbl">category</span>
+              <select class="fc" id="recCat">
+                <option value="Housing">Housing</option>
+                <option value="Food">Food</option>
+                <option value="Transport">Transport</option>
+                <option value="Health">Health</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="f-wrap" style="flex:0 0 90px;min-width:0;">
+              <span class="f-lbl">day of month</span>
+              <input class="fc" type="number" id="recDay" placeholder="1" min="1" max="31" value="1"/>
+            </div>
+            <div class="f-wrap f-shrink" style="justify-content:flex-end;">
+              <span class="f-lbl">&nbsp;</span>
+              <button class="btn-add" onclick="addRecurring()" style="width:auto;padding:0 18px;">+ add</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CHARTS PANE -->
     <div id="pane-charts" class="pane">
-      <div class="charts-grid">
+      <div class="charts-grid"></div>
         <div class="card">
           <div class="card-head"><span class="card-title">by category</span></div>
           <div class="chart-body"><div class="chart-cvs" style="height:200px;"><canvas id="pieChart" role="img"></canvas></div></div>
@@ -1051,6 +1201,14 @@ kbd{
         <div class="card-head"><span class="card-title">person-wise share</span></div>
         <div class="charts-grid" style="padding:14px 16px 0;"><div class="chart-cvs" style="height:200px;"><canvas id="personPieChart" role="img"></canvas></div><div class="chart-cvs" style="height:200px;"><canvas id="personBarChart" role="img"></canvas></div></div>
         <div class="legend" id="personLegend"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">spending by day of week</span></div>
+        <div id="dowPatternPanel"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">category budgets</span></div>
+        <div id="catBudgetPanel"></div>
       </div>
     </div>
 
@@ -1218,6 +1376,16 @@ kbd{
     
     <!-- Categories Tab -->
     <div id="tab-categories" class="cs-tab-content active">
+      <div class="cs-presets">
+        <div class="cs-presets-title">color schemes</div>
+        <div class="cs-preset-grid">
+          <button class="cs-preset-btn" onclick="applyColorPreset('material')">material</button>
+          <button class="cs-preset-btn" onclick="applyColorPreset('pastel')">pastel</button>
+          <button class="cs-preset-btn" onclick="applyColorPreset('vibrant')">vibrant</button>
+          <button class="cs-preset-btn" onclick="applyColorPreset('neon')">neon</button>
+          <button class="cs-preset-btn" onclick="applyColorPreset('earth')">earth</button>
+        </div>
+      </div>
       <div id="colorSettingsList"></div>
       <div class="cs-add-section">
         <div class="cs-add-title">add new category</div>
@@ -1236,6 +1404,15 @@ kbd{
       <div id="peopleColorList"></div>
     </div>
   </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Loading...</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1284,20 +1461,50 @@ function updateThemeIcon(){
 }
 loadTheme();
 
+/* ── TOAST NOTIFICATIONS ────────────────────────────── */
+function showToast(message,type='info',duration=3000){
+  const container=document.getElementById('toastContainer');
+  const toast=document.createElement('div');
+  toast.className=`toast ${type}`;
+  
+  const icons={success:'✓',error:'✕',info:'i'};
+  toast.innerHTML=`
+    <div class="toast-icon">${icons[type]||'i'}</div>
+    <div class="toast-message">${message}</div>
+    <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+  `;
+  
+  container.appendChild(toast);
+  
+  setTimeout(()=>{
+    toast.classList.add('hiding');
+    setTimeout(()=>toast.remove(),300);
+  },duration);
+}
+
+/* ── LOADING OVERLAY ────────────────────────────────── */
+function showLoading(text='Loading...'){
+  const overlay=document.getElementById('loadingOverlay');
+  const textEl=document.getElementById('loadingText');
+  textEl.textContent=text;
+  overlay.classList.add('active');
+}
+function hideLoading(){
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
 /* ── COLOR SETTINGS ─────────────────────────────────── */
 function loadCategoryColors(){
+  // colors now live in state.categoryColors — apply them on top of defaults
   try{
-    const saved=localStorage.getItem('categoryColors');
-    if(saved){
-      const custom=JSON.parse(saved);
-      Object.assign(CATS,custom);
+    if(state.categoryColors&&Object.keys(state.categoryColors).length){
+      Object.assign(CATS,state.categoryColors);
     }
   }catch(e){}
 }
 function saveCategoryColors(){
-  try{
-    localStorage.setItem('categoryColors',JSON.stringify(CATS));
-  }catch(e){}
+  state.categoryColors=Object.assign({},CATS);
+  saveState();
 }
 function updateCategoryColor(cat,color){
   CATS[cat]=color;
@@ -1310,7 +1517,8 @@ function updateCategoryColor(cat,color){
 }
 function resetCategoryColors(){
   CATS=Object.assign({},DEFAULT_CATS);
-  localStorage.removeItem('categoryColors');
+  state.categoryColors={};
+  saveState();
   render();
   if(document.getElementById('pane-charts').classList.contains('active')){
     setTimeout(renderCharts,50);
@@ -1370,23 +1578,15 @@ function addNewCategory(){
   const colorInput=document.getElementById('newCategoryColor');
   const name=nameInput.value.trim();
   const color=colorInput.value;
-  
-  if(!name){
-    alert('Please enter a category name');
-    return;
-  }
-  
-  if(CATS.hasOwnProperty(name)){
-    alert('Category already exists');
-    return;
-  }
-  
+  if(!name){showToast('Please enter a category name','error');return;}
+  if(CATS.hasOwnProperty(name)){showToast('Category already exists','error');return;}
   CATS[name]=color;
   saveCategoryColors();
   updateAllCategorySelects();
   renderColorSettingsList();
   nameInput.value='';
   colorInput.value='#7B8BFF';
+  showToast(`Category "${name}" added`,'success');
 }
 function startCategoryEdit(cat){
   window._editingCategory=cat;
@@ -1403,56 +1603,39 @@ function cancelCategoryEdit(){
 function saveCategoryEdit(oldName){
   const input=document.getElementById('edit-cat-'+oldName);
   const newName=input?input.value.trim():'';
-  
-  if(!newName||newName===oldName){
-    cancelCategoryEdit();
-    return;
-  }
-  
-  if(CATS.hasOwnProperty(newName)&&newName!==oldName){
-    alert('Category name already exists');
-    return;
-  }
-  
+  if(!newName||newName===oldName){cancelCategoryEdit();return;}
+  if(CATS.hasOwnProperty(newName)&&newName!==oldName){showToast('Category name already exists','error');return;}
   const color=CATS[oldName];
   delete CATS[oldName];
   CATS[newName]=color;
-  
   const m=getMonth();
   (state.expenses[m]||[]).forEach(e=>{if(e.cat===oldName)e.cat=newName;});
   state.wishlist.forEach(w=>{if(w.cat===oldName)w.cat=newName;});
-  
   saveCategoryColors();
   saveState();
   updateAllCategorySelects();
   window._editingCategory=null;
   render();
   renderColorSettingsList();
+  showToast(`Renamed to "${newName}"`,'success');
 }
 function deleteCategory(cat){
-  if(DEFAULT_CATS.hasOwnProperty(cat)){
-    alert('Cannot delete default categories');
-    return;
-  }
-  
+  if(DEFAULT_CATS.hasOwnProperty(cat)){showToast('Cannot delete default categories','error');return;}
   const m=getMonth();
   const hasExpenses=(state.expenses[m]||[]).some(e=>e.cat===cat);
   const hasWishes=state.wishlist.some(w=>w.cat===cat);
-  
   if(hasExpenses||hasWishes){
-    if(!confirm(`Category "${cat}" is in use. Move items to "Other" category?`)){
-      return;
-    }
+    if(!confirm(`Category "${cat}" is in use. Move items to "Other"?`)){return;}
     (state.expenses[m]||[]).forEach(e=>{if(e.cat===cat)e.cat='Other';});
     state.wishlist.forEach(w=>{if(w.cat===cat)w.cat='Other';});
     saveState();
   }
-  
   delete CATS[cat];
   saveCategoryColors();
   updateAllCategorySelects();
   render();
   renderColorSettingsList();
+  showToast(`Category "${cat}" deleted`,'info');
 }
 function updateAllCategorySelects(){
   const selects=document.querySelectorAll('#newCat,#wishCat,[id^="ecat-"],[id^="wcat-"]');
@@ -1461,6 +1644,40 @@ function updateAllCategorySelects(){
     const cats=Object.keys(CATS);
     sel.innerHTML=cats.map(c=>`<option value="${c}"${c===current?' selected':''}>${c}</option>`).join('');
   });
+}
+
+/* ── COLOR PALETTE PRESETS ──────────────────────────── */
+const COLOR_PRESETS={
+  material:{
+    Housing:'#3F51B5',Food:'#4CAF50',Transport:'#FF9800',Health:'#E91E63',
+    Shopping:'#9C27B0',Entertainment:'#F44336',Utilities:'#00BCD4',Other:'#607D8B'
+  },
+  pastel:{
+    Housing:'#B0C4EF',Food:'#A8E6CF',Transport:'#FFE5A0',Health:'#FFB3C6',
+    Shopping:'#D4B0F0',Entertainment:'#FFB3AE',Utilities:'#A0E4E4',Other:'#C4C4C4'
+  },
+  vibrant:{
+    Housing:'#FF4081',Food:'#00E676',Transport:'#FFEA00',Health:'#FF6D00',
+    Shopping:'#D500F9',Entertainment:'#FF1744',Utilities:'#00E5FF',Other:'#78909C'
+  },
+  neon:{
+    Housing:'#39FF14',Food:'#FF073A',Transport:'#FFE801',Health:'#FF69B4',
+    Shopping:'#BC13FE',Entertainment:'#FE4164',Utilities:'#08F7FE',Other:'#708090'
+  },
+  earth:{
+    Housing:'#8B4513',Food:'#6B8E23',Transport:'#D2691E',Health:'#BC8F5F',
+    Shopping:'#A0522D',Entertainment:'#CD853F',Utilities:'#4682B4',Other:'#808080'
+  }
+};
+function applyColorPreset(name){
+  const preset=COLOR_PRESETS[name];
+  if(!preset)return;
+  Object.entries(preset).forEach(([cat,color])=>{if(CATS[cat])CATS[cat]=color;});
+  saveCategoryColors();
+  renderColorSettingsList();
+  render();
+  if(document.getElementById('pane-charts').classList.contains('active'))setTimeout(renderCharts,50);
+  showToast(`Applied "${name}" color scheme`,'success');
 }
 
 /* ── PEOPLE COLOR MANAGEMENT ────────────────────────── */
@@ -1506,7 +1723,7 @@ function renderPeopleColorList(){
   }).join('');
 }
 
-loadCategoryColors();
+// loadCategoryColors() is called inside loadState() after state is ready
 
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -1542,6 +1759,10 @@ function _ensureStateDefaults(){
   if(!state.people)      state.people=[];
   if(!state.splits)      state.splits={};
   if(!state.settlements) state.settlements={};
+  if(!state.personColors)state.personColors={};
+  if(!state.categoryColors)state.categoryColors={};
+  if(!state.catBudgets)  state.catBudgets={};
+  if(!state.recurring)   state.recurring=[];
   if(state.budget===undefined)state.budget=30000;
   Object.values(state.expenses).forEach(a=>a.forEach(e=>{if(!e.id)e.id=genId();}));
   state.wishlist.forEach(w=>{if(!w.id)w.id=genId();});
@@ -1553,6 +1774,26 @@ function _ensureStateDefaults(){
       delete exp.amount;
     } else if(!exp.entries) exp.entries=[];
   }));
+  // migrate old localStorage-only data into state (one-time)
+  _migrateLocalStorageToState();
+}
+
+function _migrateLocalStorageToState(){
+  // Only migrate if state fields are empty (first time after upgrade)
+  try{
+    if(!Object.keys(state.categoryColors).length){
+      const old=localStorage.getItem('categoryColors');
+      if(old){state.categoryColors=JSON.parse(old);localStorage.removeItem('categoryColors');}
+    }
+    if(!Object.keys(state.catBudgets).length){
+      const old=localStorage.getItem('catBudgets');
+      if(old){state.catBudgets=JSON.parse(old);localStorage.removeItem('catBudgets');}
+    }
+    if(!state.recurring.length){
+      const old=localStorage.getItem('recurringExp');
+      if(old){state.recurring=JSON.parse(old);localStorage.removeItem('recurringExp');}
+    }
+  }catch(e){}
 }
 
 function _seedDemoData(){
@@ -1572,6 +1813,7 @@ function loadState(){
   try{const s=localStorage.getItem('expTrackerV5');if(s)state=JSON.parse(s);}catch(e){}
   _ensureStateDefaults();
   _seedDemoData();
+  loadCategoryColors(); // apply state.categoryColors onto CATS after state is ready
 }
 function saveState(){
   try{localStorage.setItem('expTrackerV5',JSON.stringify(state));}catch(e){}
@@ -1648,7 +1890,8 @@ function renderExpCard(expenses){
               <button class="btn-del" onclick="cancelEditExp('${exp.id}')" title="Cancel">&#10005;</button>
             </div>
           </div>`
-        :`<div class="exp-row exp-main-row" data-cat="${escHtml(exp.cat)}" onclick="toggleExpand('${exp.id}')">
+        :`<div class="exp-row exp-main-row" data-cat="${escHtml(exp.cat)}" onclick="toggleExpand('${exp.id}')"
+            onmouseenter="showExpPreview('${exp.id}',this)" onmouseleave="hideExpPreview()">
             <div class="exp-info">
               <div class="exp-name">${escHtml(exp.name)}</div>
               <div class="exp-cat">${exp.cat.toLowerCase()}${entries.length?`<span class="exp-count">${entries.length}</span>`:''}${exp.fromWish?'<span class="exp-tag" style="margin-left:6px">wish</span>':''}</div>
@@ -1699,6 +1942,7 @@ function addExpense(){
   expandedExp.add(id);
   saveState();
   render();
+  showToast(`"${name}" added — ₹${amt.toLocaleString('en-IN')}`,'success');
 }
 function deleteExpense(id){
   const m=getMonth();
@@ -1707,11 +1951,13 @@ function deleteExpense(id){
     const wi=state.wishlist.find(w=>w.id===exp.fromWish);
     if(wi)wi.done=false;
   }
+  const name=exp?exp.name:'Expense';
   state.expenses[m]=(state.expenses[m]||[]).filter(e=>e.id!==id);
   if(state.splits[m])delete state.splits[m][id];
   expandedExp.delete(id);
   saveState();
   render();
+  showToast(`"${name}" removed`,'info');
 }
 function addEntry(expId){
   const m=getMonth();
@@ -1846,12 +2092,16 @@ function addPerson(){
   document.getElementById('personName').value='';
   saveState();
   renderSplit();populatePaidBySelects();
+  showToast(`${name} added to split`,'success');
 }
 function removePerson(id){
+  const p=state.people.find(p=>p.id===id);
+  const name=p?p.name:'Person';
   state.people=state.people.filter(p=>p.id!==id);
   Object.values(state.splits).forEach(ms=>Object.values(ms).forEach(sp=>delete sp[id]));
   saveState();
   renderSplit();populatePaidBySelects();
+  showToast(`${name} removed`,'info');
 }
 function initials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 
@@ -2713,7 +2963,222 @@ function saveBudget(val){
   
   render();
   populatePaidBySelects();
+  checkRecurringExpenses();
+  renderRecurringPanel();
 })();
+</script>
+
+<!-- ── FEATURES: HOVER PREVIEW · PER-CAT BUDGETS · DOW PATTERNS · RECURRING ── -->
+<script>
+
+/* ── HOVER PREVIEW ──────────────────────────────────── */
+let previewEl=null;
+function initHoverPreviews(){
+  previewEl=document.createElement('div');
+  previewEl.className='exp-preview';
+  previewEl.id='expHoverPreview';
+  document.body.appendChild(previewEl);
+}
+function showExpPreview(expId,anchorEl){
+  if(!previewEl)initHoverPreviews();
+  const m=getMonth();
+  const exp=(state.expenses[m]||[]).find(e=>e.id===expId);
+  if(!exp||exp.entries.length<2)return;
+  const total=expTotal(exp);
+  const entries=exp.entries.slice(0,5);
+  previewEl.innerHTML=`
+    <div class="exp-preview-label">${exp.cat} · ${exp.entries.length} entries</div>
+    <div class="exp-preview-value">₹${total.toLocaleString('en-IN')} total</div>
+    <div class="exp-preview-entries">${entries.map(e=>{
+      const payer=e.paidBy?state.people.find(p=>p.id===e.paidBy):null;
+      return `<div style="display:flex;justify-content:space-between;gap:12px;">
+        <span>${fmtDate(e.date)}${e.note?' — '+escHtml(e.note):''}${payer?' ('+escHtml(payer.name)+')':''}</span>
+        <span>₹${e.amount.toLocaleString('en-IN')}</span>
+      </div>`;
+    }).join('')}${exp.entries.length>5?`<div style="color:var(--ink-4);margin-top:2px;">+${exp.entries.length-5} more…</div>`:''}</div>
+  `;
+  const rect=anchorEl.getBoundingClientRect();
+  previewEl.style.position='fixed';
+  previewEl.style.top=(rect.top-8)+'px';
+  previewEl.style.left=Math.min(rect.left,window.innerWidth-220)+'px';
+  previewEl.classList.add('show');
+}
+function hideExpPreview(){
+  if(previewEl)previewEl.classList.remove('show');
+}
+
+/* ── PER-CATEGORY BUDGETS ───────────────────────────── */
+function getCatBudgets(){return state.catBudgets||{};}
+function saveCatBudgets(b){state.catBudgets=b;saveState();}
+function getCatBudget(cat){return getCatBudgets()[cat]||0;}
+function setCatBudget(cat,val){
+  const b=getCatBudgets();
+  if(val>0)b[cat]=val;else delete b[cat];
+  saveCatBudgets(b);
+  showToast(`Budget set for ${cat}`,'success');
+  renderCatBudgetPanel();
+}
+function renderCatBudgetPanel(){
+  const el=document.getElementById('catBudgetPanel');
+  if(!el)return;
+  const m=getMonth();
+  const expenses=state.expenses[m]||[];
+  const catTotals={};
+  expenses.forEach(e=>{catTotals[e.cat]=(catTotals[e.cat]||0)+expTotal(e);});
+  const budgets=getCatBudgets();
+  el.innerHTML=Object.keys(CATS).map(cat=>{
+    const spent=catTotals[cat]||0;
+    const budget=budgets[cat]||0;
+    const pct=budget>0?Math.min(100,Math.round(spent/budget*100)):0;
+    const over=budget>0&&spent>budget;
+    return `<div class="bk-row">
+      <div class="bk-top">
+        <span class="bk-cat"><span class="bk-dot" style="background:${CATS[cat]}"></span>${cat}</span>
+        <span class="bk-right">
+          <span class="bk-pct" style="color:${over?'var(--red)':'var(--ink-3)'}">
+            ${budget>0?(over?'⚠ over':'₹'+spent.toLocaleString('en-IN')+' / ₹'+budget.toLocaleString('en-IN')):'—'}
+          </span>
+          <div style="position:relative;display:inline-flex;align-items:center;">
+            <span style="position:absolute;left:7px;font-family:var(--ff-mono);font-size:11px;color:var(--ink-3);pointer-events:none;">₹</span>
+            <input type="number" min="0" placeholder="set budget"
+              value="${budget||''}"
+              style="width:100px;height:24px;padding:0 6px 0 18px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--ink-1);font-family:var(--ff-mono);font-size:11px;outline:none;"
+              onchange="setCatBudget('${cat}',parseFloat(this.value)||0)"
+              onfocus="this.style.borderColor='var(--brand)'"
+              onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+        </span>
+      </div>
+      ${budget>0?`<div class="bk-bar-bg"><div class="bk-bar-fill" style="width:${pct}%;background:${over?'var(--red)':CATS[cat]};"></div></div>
+      <div style="font-family:var(--ff-mono);font-size:10px;color:${over?'var(--red)':'var(--ink-3)'};margin-top:3px;">${pct}% used</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* ── DAY-OF-WEEK PATTERNS ───────────────────────────── */
+function renderDowPatterns(){
+  const el=document.getElementById('dowPatternPanel');
+  if(!el)return;
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dow={0:0,1:0,2:0,3:0,4:0,5:0,6:0};
+  const dowCount={0:0,1:0,2:0,3:0,4:0,5:0,6:0};
+  Object.values(state.expenses).forEach(arr=>arr.forEach(exp=>{
+    (exp.entries||[]).forEach(en=>{
+      if(!en.date)return;
+      const d=new Date(en.date+'T00:00:00');
+      const day=d.getDay();
+      dow[day]=(dow[day]||0)+(en.amount||0);
+      dowCount[day]=(dowCount[day]||0)+1;
+    });
+  }));
+  const avgByDay=days.map((_,i)=>dowCount[i]>0?Math.round(dow[i]/dowCount[i]):0);
+  const maxAvg=Math.max(...avgByDay,1);
+  const busiest=avgByDay.indexOf(Math.max(...avgByDay));
+  el.innerHTML=`
+    <div style="padding:0 16px 4px;font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);">
+      avg spend per entry · busiest day: <span style="color:var(--brand);font-weight:600;">${days[busiest]}</span>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:4px;padding:8px 16px 12px;height:80px;">
+      ${days.map((d,i)=>{
+        const pct=Math.round(avgByDay[i]/maxAvg*100);
+        const isBusiest=i===busiest;
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
+          <div style="font-family:var(--ff-mono);font-size:9px;color:${isBusiest?'var(--brand)':'var(--ink-4)'};">
+            ${avgByDay[i]>0?'₹'+(avgByDay[i]>=1000?Math.round(avgByDay[i]/1000)+'k':avgByDay[i]):''}
+          </div>
+          <div style="width:100%;background:${isBusiest?'var(--brand)':'var(--border)'};border-radius:3px 3px 0 0;height:${pct}%;min-height:${avgByDay[i]>0?3:0}px;transition:height .4s;"></div>
+          <div style="font-family:var(--ff-mono);font-size:9px;font-weight:${isBusiest?700:400};color:${isBusiest?'var(--brand)':'var(--ink-3)'};">${d}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+/* ── RECURRING EXPENSES ─────────────────────────────── */
+function getRecurring(){return state.recurring||[];}
+function saveRecurring(r){state.recurring=r;saveState();}
+function addRecurring(){
+  const name=(document.getElementById('recName')?.value||'').trim();
+  const amt=parseFloat(document.getElementById('recAmt')?.value||'0');
+  const cat=document.getElementById('recCat')?.value||'Other';
+  const day=parseInt(document.getElementById('recDay')?.value||'1');
+  if(!name||!amt||amt<=0){showToast('Fill in name and amount','error');return;}
+  const rec=getRecurring();
+  rec.push({id:genId(),name,amt,cat,day,active:true});
+  saveRecurring(rec);
+  document.getElementById('recName').value='';
+  document.getElementById('recAmt').value='';
+  renderRecurringPanel();
+  showToast(`"${name}" will auto-add on day ${day} each month`,'success');
+}
+function toggleRecurring(id){
+  const rec=getRecurring();
+  const item=rec.find(r=>r.id===id);
+  if(item){item.active=!item.active;saveRecurring(rec);}
+  renderRecurringPanel();
+}
+function deleteRecurring(id){
+  const rec=getRecurring().filter(r=>r.id!==id);
+  saveRecurring(rec);
+  renderRecurringPanel();
+  showToast('Recurring removed','info');
+}
+function checkRecurringExpenses(){
+  const rec=getRecurring().filter(r=>r.active);
+  if(!rec.length)return;
+  const m=getMonth();
+  const [y,mo]=m.split('-').map(Number);
+  const key='recChecked_'+m;
+  if(localStorage.getItem(key))return;
+  localStorage.setItem(key,'1');
+  let added=0;
+  rec.forEach(r=>{
+    const already=(state.expenses[m]||[]).some(e=>e.fromRecurring===r.id);
+    if(already)return;
+    const day=Math.min(r.day,new Date(y,mo,0).getDate());
+    const date=`${y}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    if(!state.expenses[m])state.expenses[m]=[];
+    state.expenses[m].push({
+      id:genId(),name:r.name,cat:r.cat,fromRecurring:r.id,
+      entries:[{id:genId(),date,amount:r.amt,note:'Recurring'}]
+    });
+    added++;
+  });
+  if(added>0){saveState();render();showToast(`${added} recurring expense${added>1?'s':''} added for ${monthLabel(m)}`,'info',5000);}
+}
+function renderRecurringPanel(){
+  const el=document.getElementById('recurringPanel');
+  if(!el)return;
+  const rec=getRecurring();
+  if(rec.length===0){
+    el.innerHTML=`<div style="padding:10px 16px;font-family:var(--ff-mono);font-size:11px;color:var(--ink-3);">No recurring expenses yet.</div>`;
+  }else{
+    el.innerHTML=rec.map(r=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;border-bottom:1px solid var(--border-lt);opacity:${r.active?1:.5};">
+        <span style="width:8px;height:8px;border-radius:50%;background:${CATS[r.cat]||'var(--ink-4)'};flex-shrink:0;"></span>
+        <span style="flex:1;font-family:var(--ff);font-size:13px;font-weight:500;color:var(--ink-1);">${escHtml(r.name)}</span>
+        <span style="font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);">day ${r.day}</span>
+        <span style="font-family:var(--ff-mono);font-size:12px;font-weight:500;color:var(--ink-1);">₹${r.amt.toLocaleString('en-IN')}</span>
+        <button onclick="toggleRecurring('${r.id}')" style="background:${r.active?'var(--green-lt)':'var(--surface-3)'};color:${r.active?'var(--green)':'var(--ink-3)'};border:none;border-radius:var(--r-sm);padding:2px 8px;font-family:var(--ff-mono);font-size:10px;font-weight:600;cursor:pointer;">${r.active?'on':'off'}</button>
+        <button class="btn-del" onclick="deleteRecurring('${r.id}')" title="Delete">✕</button>
+      </div>
+    `).join('');
+  }
+}
+
+/* ── WIRE NEW PANELS TO CHARTS TAB ─────────────────── */
+/* Patch: after the original switchTab runs (defined in the main script),
+   we augment it by replacing it once with a non-recursive wrapper that
+   captures the original reference before redefinition. */
+(function(){
+  const _orig=switchTab; // capture the already-defined original
+  window.switchTab=function(name){
+    _orig(name);
+    if(name==='charts'){setTimeout(()=>{renderCatBudgetPanel();renderDowPatterns();},60);}
+  };
+})();
+
+document.addEventListener('DOMContentLoaded',()=>initHoverPreviews());
 </script>
 
 </body>
